@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "shieldlabs": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "SHIELDLABS_API_KEY",
+        "ghcr.io/shieldlabs-ai/shieldlabs-mcp:1.0.0"
+      ],
+      "env": {
+        "SHIELDLABS_API_KEY": "sec_your_private_key"
+      }
+    }
+  }
+}

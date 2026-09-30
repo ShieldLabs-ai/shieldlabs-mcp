@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # @shieldlabs/node is bundled into dist/ at build time. Until it is published on npm, CI builds
+  # it from this ref of its repository, which must hold a 1.x release of the SDK.
+  SHIELDLABS_NODE_REF: main
+
+jobs:
+  test:
+    name: Node.js ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Check out shieldlabs-node
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: ShieldLabs-ai/shieldlabs-node
+          ref: ${{ env.SHIELDLABS_NODE_REF }}
+          path: .deps/shieldlabs-node
+          # While that repository is private, store a read-only token in SHIELDLABS_NODE_TOKEN.
+          token: ${{ secrets.SHIELDLABS_NODE_TOKEN || github.token }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Build and pack @shieldlabs/node
+        working-directory: .deps/shieldlabs-node
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          case "$version" in
+            1.*) ;;
+            *)
+              echo "::error::@shieldlabs/node at $SHIELDLABS_NODE_REF is version $version; this server needs 1.x."
+              exit 1
+              ;;
+          esac
+          npm ci
+          npm pack --pack-destination ..
+          echo "SHIELDLABS_NODE_TGZ=.deps/shieldlabs-node-$version.tgz" >> "$GITHUB_ENV"
+
+      - run: npm ci
+
+      - name: Install @shieldlabs/node from the tarball
+        run: npm install --no-save "$SHIELDLABS_NODE_TGZ"
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test -- --coverage
+      - run: npm run build
+      - run: node dist/index.js --help
+
+      - name: Smoke test over stdio against the fake History API
+        run: npm run smoke
+
+      - name: Check the published file list
+        run: npm pack --dry-run

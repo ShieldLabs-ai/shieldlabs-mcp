@@ -1,0 +1,170 @@
+name: Release
+
+# Publishes @shieldlabs/mcp to npm and the image to ghcr.io when a maintainer pushes a tag such as
+# v1.0.0. The build job checks, builds and packs with read-only permissions; the publish jobs run
+# in the "npm" and "ghcr" environments (add required reviewers to them in the repository settings)
+# and need the NPM_TOKEN secret (the image uses the built-in GITHUB_TOKEN). Safe to re-run: a
+# version that is already on npm is skipped, and the image tags are pushed again.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+env:
+  # The @shieldlabs/node release bundled into dist/: release it (tag v1.0.0 in its repository)
+  # before releasing this package.
+  SHIELDLABS_NODE_REF: v1.0.0
+
+jobs:
+  build:
+    name: Check, build and pack
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Check out shieldlabs-node
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: ShieldLabs-ai/shieldlabs-node
+          ref: ${{ env.SHIELDLABS_NODE_REF }}
+          path: .deps/shieldlabs-node
+          # While that repository is private, store a read-only token in SHIELDLABS_NODE_TOKEN.
+          token: ${{ secrets.SHIELDLABS_NODE_TOKEN || github.token }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Check that the tag matches package.json
+        id: version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::The tag ${GITHUB_REF_NAME} does not match the package.json version ${version}."
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and pack @shieldlabs/node
+        working-directory: .deps/shieldlabs-node
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          case "$version" in
+            1.*) ;;
+            *)
+              echo "::error::@shieldlabs/node at $SHIELDLABS_NODE_REF is version $version; this server needs 1.x."
+              exit 1
+              ;;
+          esac
+          npm ci
+          npm pack --pack-destination ..
+          echo "SHIELDLABS_NODE_TGZ=.deps/shieldlabs-node-$version.tgz" >> "$GITHUB_ENV"
+
+      - run: npm ci
+      - run: npm install --no-save "$SHIELDLABS_NODE_TGZ"
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: node dist/index.js --version
+
+      - name: Smoke test over stdio against the fake History API
+        run: npm run smoke
+
+      # dist/ is built and bundles @shieldlabs/node: pack it without running the build again.
+      - run: npm pack --ignore-scripts
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: package
+          path: shieldlabs-mcp-${{ steps.version.outputs.version }}.tgz
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  npm:
+    name: Publish to npm
+    needs: build
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: package
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Publish unless this version is already on npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          if [ "$(npm view "@shieldlabs/mcp@${VERSION}" version 2>/dev/null)" = "${VERSION}" ]; then
+            echo "@shieldlabs/mcp@${VERSION} is already on npm: nothing to publish."
+            exit 0
+          fi
+          npm publish "shieldlabs-mcp-${VERSION}.tgz" --provenance --access public
+
+  image:
+    name: Push the container image
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ghcr
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist/
+
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        with:
+          images: ghcr.io/shieldlabs-ai/shieldlabs-mcp
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true

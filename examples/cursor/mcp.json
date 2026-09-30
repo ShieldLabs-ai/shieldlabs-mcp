@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "shieldlabs": {
+      "command": "npx",
+      "args": ["-y", "@shieldlabs/mcp"],
+      "env": {
+        "SHIELDLABS_API_KEY": "sec_your_private_key"
+      }
+    }
+  }
+}

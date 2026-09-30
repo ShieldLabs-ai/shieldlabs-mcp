@@ -1,0 +1,122 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.shieldlabs-ai/shieldlabs-mcp",
+  "title": "ShieldLabs",
+  "description": "Read ShieldLabs identifications and history, explain Risk Scores, verify webhook signatures.",
+  "version": "1.0.0",
+  "websiteUrl": "https://docs.shieldlabs.ai",
+  "repository": {
+    "url": "https://github.com/ShieldLabs-ai/shieldlabs-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@shieldlabs/mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SHIELDLABS_API_KEY",
+          "description": "Private API Key (sec_...) of one domain, from the analytics dashboard. Enables the History API tools; without it only the offline tools run.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SHIELDLABS_SECRET_KEY",
+          "description": "Secret Key of the domain for the Management API (optional, enables shieldlabs_get_domain_profile together with SHIELDLABS_DOMAIN).",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SHIELDLABS_DOMAIN",
+          "description": "Registered domain for the Management API, for example example.com (optional).",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "SHIELDLABS_WEBHOOK_SECRET",
+          "description": "Endpoint signing secret (whsec_...) used by shieldlabs_verify_webhook_signature when no secret is passed; several separated by commas while you rotate (optional).",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SHIELDLABS_API_BASE_URL",
+          "description": "History API origin for development and tests (optional). https, or plain http for localhost, 127.0.0.1 and [::1] only.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string",
+          "default": "https://account.shieldlabs.ai"
+        },
+        {
+          "name": "SHIELDLABS_MANAGEMENT_BASE_URL",
+          "description": "Management API origin for development and tests (optional). https, or plain http for localhost, 127.0.0.1 and [::1] only.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string",
+          "default": "https://api.shieldlabs.ai"
+        }
+      ]
+    },
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/shieldlabs-ai/shieldlabs-mcp:1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SHIELDLABS_API_KEY",
+          "description": "Private API Key (sec_...) of one domain, from the analytics dashboard. Enables the History API tools; without it only the offline tools run.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SHIELDLABS_SECRET_KEY",
+          "description": "Secret Key of the domain for the Management API (optional, enables shieldlabs_get_domain_profile together with SHIELDLABS_DOMAIN).",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SHIELDLABS_DOMAIN",
+          "description": "Registered domain for the Management API, for example example.com (optional).",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "SHIELDLABS_WEBHOOK_SECRET",
+          "description": "Endpoint signing secret (whsec_...) used by shieldlabs_verify_webhook_signature when no secret is passed; several separated by commas while you rotate (optional).",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SHIELDLABS_API_BASE_URL",
+          "description": "History API origin for development and tests (optional).",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string",
+          "default": "https://account.shieldlabs.ai"
+        },
+        {
+          "name": "SHIELDLABS_MANAGEMENT_BASE_URL",
+          "description": "Management API origin for development and tests (optional).",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string",
+          "default": "https://api.shieldlabs.ai"
+        }
+      ]
+    }
+  ]
+}

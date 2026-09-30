@@ -1,0 +1,8 @@
+dist/
+coverage/
+node_modules/
+.deps/
+test/fixtures/
+test/mock-data/
+*.md
+package-lock.json

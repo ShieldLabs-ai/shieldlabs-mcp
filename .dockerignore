@@ -1,0 +1,5 @@
+# Allowlist: the image needs the manifest, the lockfile and the built bundle only.
+*
+!package.json
+!package-lock.json
+!dist/

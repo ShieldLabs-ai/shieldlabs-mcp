@@ -1,0 +1,42 @@
+<evaluation>
+   <qa_pair>
+      <question>A new signup arrived with the ShieldLabs request ID 8614bd7c-0ff7-49f7-86a8-1daa719f458b, and the fraud team suspects that one device is being used to open many accounts. Counting only real accounts (ignore anonymous checks), how many distinct User HIDs have been seen on the device behind this signup? Answer with a number only.</question>
+      <answer>4</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>The account that made the request with request ID 620b17aa-f279-43b9-b8a0-ab29fad8ca5e is suspected of sharing its login. How many distinct devices has that account used across its ShieldLabs history? Answer with a number only.</question>
+      <answer>5</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>For the account with User HID a8674fff69e97170beb994733f8dafbaf9e09a0e9ffe4eb83a2a76019343d6b1, from which country did most of its identifications originate, judging by the public IP address? Answer with the English country name only.</question>
+      <answer>France</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>The account with User HID 05481c1203d77ba24e3632734dd2f96a5067c0285e4eb615ef9e4387d57a4e93 may show impossible travel. Put its identifications in time order and look at each pair of consecutive identifications whose public IP countries differ. What is the shortest time between such a pair, in whole minutes? Answer with a number only.</question>
+      <answer>27</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Look up the identification with request ID 6cace8d9-7b52-4bff-9c05-3a4237ab1eb2. For the account behind it, how many identifications in its entire ShieldLabs history arrived through a VPN connection type? Answer with a number only.</question>
+      <answer>17</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>An automated burst hit the login page, and the request with request ID deeff083-a006-4e21-98b2-ee71c0fcb9d6 was part of it. How many identifications from the same public IP address carry the rate-limit marker instead of a real Risk Score? Answer with a number only.</question>
+      <answer>3</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Consider every identification of the device with device ID a9d00663-59f2-5ffa-93aa-252cbf5b8d91 and take the one with the highest Risk Score. Which risk signal contributed the largest weight to that Risk Score? Answer with the risk signal slug exactly as ShieldLabs names it.</question>
+      <answer>os_mismatch</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>The visitor behind the request with request ID 8336f5ee-5bb9-4e64-9931-ee30bc7f6d81 came to the site several times from advertising campaigns. Among that visitor's identifications that were flagged as a suspicious paid click, what is the utm_campaign value of the earliest one? Answer with the exact value only.</question>
+      <answer>autumn_sale_2026</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Our webhook endpoint rejected a ShieldLabs delivery. The web framework handed our code this body: {"created_at": "2026-09-30T12:34:56Z", "event_type": "webhook.ping", "schema_version": "2026-06-01"} together with the header X-Shield-Signature: sha256=ea2685733d254f7028fb031c4214583b0650de01e6c8c93131236024edd9fdd8, and the endpoint signing secret is whsec_00112233445566778899aabbccddeeff. Is the signature valid for the body exactly as our code received it? Answer True or False.</question>
+      <answer>False</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>The account with User HID 05481c1203d77ba24e3632734dd2f96a5067c0285e4eb615ef9e4387d57a4e93 was seen from Brazil. When did its first identification from Brazil happen? Answer in UTC in the format YYYY-MM-DD HH:MM.</question>
+      <answer>2026-09-20 09:37</answer>
+   </qa_pair>
+</evaluation>
