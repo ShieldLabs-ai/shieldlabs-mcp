@@ -19,5 +19,13 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "test", "scripts/**/*.d.mts", "vitest.config.ts", "tsup.config.ts"]
+  "include": [
+    "src",
+    "test",
+    "scripts/**/*.d.mts",
+    "vitest.config.ts",
+    "vitest.worker.config.ts",
+    "tsup.config.ts"
+  ],
+  "exclude": ["test/worker"]
 }

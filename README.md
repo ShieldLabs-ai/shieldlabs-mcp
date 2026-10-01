@@ -78,6 +78,40 @@ start). A container image is published as `ghcr.io/shieldlabs-ai/shieldlabs-mcp`
 
 More client setups, HTTP and Docker: [`examples/`](examples).
 
+## Hosted server (preview)
+
+ShieldLabs also runs this server for you at `https://mcp.shieldlabs.ai/mcp` (streamable HTTP).
+There is nothing to install: add the URL to your MCP client and sign in with your ShieldLabs
+account when the client opens the sign-in page. The client then holds a short-lived access token
+(one hour) and refreshes it by itself.
+
+In this release the hosted server connects your account and offers one tool,
+`shieldlabs_check_connection`, which confirms that the connection works. The tools that read
+identifications arrive on the hosted server in a later release; until then, use the local server
+above. Sign-in is the only way in for now: the hosted server does not accept API keys yet.
+
+**Claude**: Customize > Connectors > Add custom connector, with the URL
+`https://mcp.shieldlabs.ai/mcp`.
+
+**Claude Code**: add the server, then run `/mcp` and choose Authenticate:
+
+```bash
+claude mcp add --transport http shieldlabs https://mcp.shieldlabs.ai/mcp
+```
+
+**Cursor** (`.cursor/mcp.json`) and **VS Code** (`.vscode/mcp.json`):
+
+```json
+{ "mcpServers": { "shieldlabs": { "url": "https://mcp.shieldlabs.ai/mcp" } } }
+```
+
+```json
+{ "servers": { "shieldlabs": { "type": "http", "url": "https://mcp.shieldlabs.ai/mcp" } } }
+```
+
+See [`examples/hosted`](examples/hosted) for client files. To run the hosted mode yourself, see
+[Deploy the hosted server](#deploy-the-hosted-server).
+
 ## Guide
 
 ### Review one request
@@ -197,11 +231,13 @@ tools that are exposed.
 | Flag | Default | Purpose |
 |---|---|---|
 | `--transport <stdio\|http>` | `stdio` | Transport |
+| `--mode <local\|public>` | `local` | `public` serves the hosted, multi-tenant mode (with `--transport http`); see [Deploy the hosted server](#deploy-the-hosted-server) |
 | `--port <number>` | `8787` | HTTP port |
 | `--host <address>` | `127.0.0.1` | HTTP bind address |
 | `--allowed-origins <list>` | none | Browser origins allowed to call the HTTP endpoint; requests with any other `Origin` header are refused |
 | `--tools <list>` | all available | Allowlist of tools |
 | `--offline` | off (on with `--transport http`) | Never fetch remote content (the setup prompt uses its built-in guide) |
+| `--trust-proxy` | off | With `--mode public`: take the client address of the per-address limits from `CF-Connecting-IP`, which the proxy in front must set (see [Container](#container)) |
 | `--help`, `--version` | | |
 
 ### Tools
@@ -288,6 +324,13 @@ details are internal text, so this server returns the signal slug and weight, as
 - **Network access**: the ShieldLabs APIs, plus one request to `raw.githubusercontent.com` for the
   setup skill of the pinned `shieldlabs-skills` release when the `integrate_shieldlabs` prompt runs
   on stdio (skip it with `--offline`; never over HTTP). No telemetry.
+- **Hosted server** (`--mode public`): a 401 challenge before any JSON-RPC runs, and only ShieldLabs
+  access tokens (`slat_...`) are accepted; any other credential is refused without being sent
+  anywhere. The ShieldLabs API accepts such a token only on its MCP prefix and only with this
+  server's `X-Shield-Gateway` signature (HMAC-SHA256 over the time, a fresh nonce, the method, the
+  path and the token hash), so a token copied out of a client is useless elsewhere. One client
+  address can have at most 300 new tokens checked per minute. The only state shared between
+  requests is the list of tokens accepted in the last 60 seconds, keyed by their SHA-256.
 
 ## Errors and retries
 
@@ -327,17 +370,111 @@ The wait for a new verdict (`shieldlabs_get_identification` with `wait: true`, a
 | "must be an https URL" at start | A base URL override uses plain http on a host other than `localhost`, `127.0.0.1` or `[::1]`. Use https |
 | "cannot be sent in an HTTP header" or "domain must be ASCII" at start | A key or the domain contains a line break, a space or a non-ASCII character. Copy the key again from the analytics dashboard; write an internationalized domain in its punycode form (`xn--...`) |
 | HTTP 401 on `/mcp` | Send `Authorization: Bearer <SHIELDLABS_MCP_TOKEN>` |
+| Hosted server: HTTP 401 with `invalid_token`, or "no longer accepts the access token" | The sign-in expired or was revoked, or the client sent an API key, which the hosted server does not accept yet. Reconnect ShieldLabs in the client (in Claude: Customize > Connectors) |
+| Hosted server: HTTP 503 `temporarily_unavailable` | ShieldLabs could not check the access token. Retry in a few seconds |
 | HTTP 403 on `/mcp` | The browser origin is not in `--allowed-origins`, or the request used a host name other than localhost |
 | Nothing happens on stdio | Logs go to stderr; stdout carries the protocol. Run `npx -y @shieldlabs-ai/mcp --help` to check the install |
 
 ## Compatibility
 
 - Node.js 20, 22 and 24 (tested in CI).
+- Hosted mode: Cloudflare Workers (compatibility date 2026-08-15) or Node.js 20 or later; its
+  Worker tests and deploys need Node.js 22 or later.
 - MCP TypeScript SDK 1.x: protocol revisions supported by the SDK, tools with output schemas,
   resources, resource templates and prompts. Transports: stdio and streamable HTTP.
 - History API and Management API as documented at [docs.shieldlabs.ai](https://docs.shieldlabs.ai);
   webhook schema version `2026-06-01`.
 - Semantic versioning: breaking changes only in a new major version.
+
+## Deploy the hosted server
+
+The hosted mode (`--mode public`) serves many users from one server: every request brings the
+access token of its user's sign-in, which the ShieldLabs account API checks before the server
+answers. It runs as a Cloudflare Worker, or in a container with Node.js.
+
+| Path | Answer |
+|---|---|
+| `POST /mcp` | MCP over streamable HTTP (stateless, JSON responses, one JSON-RPC message per request: a batch gets `400`). Without a token: `401` with `WWW-Authenticate: Bearer resource_metadata="<origin>/.well-known/oauth-protected-resource/mcp"`, which starts the sign-in. A token the account API refuses, or any credential that is not a ShieldLabs access token: `401` with `error="invalid_token"` added. Over the rate limits: `429`; when the token cannot be checked: `503`; when the account API refuses this server's signature: `500` |
+| `GET /.well-known/oauth-protected-resource/mcp`, `GET /.well-known/oauth-protected-resource` | Protected resource metadata (RFC 9728): the resource `<origin>/mcp`, the authorization server, `bearer_methods_supported: ["header"]`. No scopes: the ShieldLabs authorization server has none |
+| `GET /health` | `{"status":"ok","version":"..."}` without authentication and without a call to the account API |
+
+How a token is checked: the server sends `GET /mcp/v1/ping` to the account API with the token and
+an `X-Shield-Gateway: v1 kid=<key ID> t=<unix seconds> n=<nonce> sig=<signature>` header. The
+signature is the unpadded base64url HMAC-SHA256, with the secret of the gateway key, of `v1`, the
+time, the nonce, the method, the path with its query and the lowercase hex SHA-256 of the token,
+one per line. The account API accepts it for 60 seconds either way and refuses a nonce it has
+seen, so every request gets 16 fresh random bytes. A `200` lets the request through and is
+remembered for 60 seconds under the SHA-256 of the token; refusals are never remembered. The
+`shieldlabs_check_connection` tool always pings again.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SHIELDLABS_PUBLIC_ORIGIN` | required | Origin that clients connect to, for example `https://mcp.shieldlabs.ai`. The resource, and the audience of the access tokens, is its `/mcp` path |
+| `SHIELDLABS_PORTAL_URL` | required | Origin of the ShieldLabs account API that checks every token, for example `https://account.shieldlabs.ai`. It has no default, so that a server for one environment never asks another |
+| `SHIELDLABS_AUTH_ISSUER` | `SHIELDLABS_PORTAL_URL` | Authorization server named in the metadata |
+| `MCP_GATEWAY_KEY` | required, secret | `kid:secret`, the entry for this server in `MCP_GATEWAY_KEYS` of the account API of the same environment (a key ID of 1 to 32 letters, digits, `.`, `_` or `-`, and a secret of at least 32 bytes). Without it every request gets a `500` |
+
+All URLs must use https, except on `localhost`, `127.0.0.1` and `[::1]`. The server never logs a
+token, the gateway secret or a signature: every request writes one JSON line with the route, the
+JSON-RPC method and tool name, the status, the duration, 8 hex characters of the token hash and
+how the token was checked.
+
+### Cloudflare Workers
+
+`wrangler.jsonc` holds two environments, each on its custom domain with the variables above and
+three Rate Limiting bindings: `RL_TOKEN` (120 requests per minute per token), `RL_ANON` (60 per
+minute per address for requests without an accepted token) and `RL_TOKEN_CHECK` (300 per minute
+per address for tokens that are not in the cache, counted before the account API is asked). The
+network 160.79.104.0/21 of Claude's hosted connectors, where many users share addresses, is not
+limited per address.
+
+| Environment | Worker | Custom domain | Account API and issuer |
+|---|---|---|---|
+| `dev` | `shieldlabs-mcp-dev` | `dev.mcp.shieldlabs.ai` | `https://dev.account.shieldlabs.ai` |
+| `production` | `shieldlabs-mcp` | `mcp.shieldlabs.ai` | `https://account.shieldlabs.ai` |
+
+Set the gateway key once per environment, then deploy. Always name the environment; the top level
+of `wrangler.jsonc` repeats `dev`, so a deploy without `--env` never touches production:
+
+```bash
+npx wrangler secret put MCP_GATEWAY_KEY --env dev
+npx wrangler deploy --env dev
+npx wrangler deploy --dry-run --env dev   # bundle only, no Cloudflare account needed
+```
+
+To run the Worker on your machine against a local account API, put the overrides in `.dev.vars`
+(ignored by git) and start `wrangler dev`:
+
+```bash
+cat > .dev.vars <<'EOF'
+SHIELDLABS_PUBLIC_ORIGIN=http://localhost:8787
+SHIELDLABS_PORTAL_URL=http://localhost:8090
+SHIELDLABS_AUTH_ISSUER=http://localhost:8090
+MCP_GATEWAY_KEY=k1:replace-with-the-k1-secret-of-your-local-api
+EOF
+npx wrangler dev --env dev --port 8787
+```
+
+### Container
+
+The same handler runs on Node.js with `--transport http --mode public`, for example with the image:
+
+```bash
+docker run --rm -p 8787:8787 \
+  -e SHIELDLABS_PUBLIC_ORIGIN=https://mcp.example.com \
+  -e SHIELDLABS_PORTAL_URL=https://account.shieldlabs.ai \
+  -e MCP_GATEWAY_KEY \
+  ghcr.io/shieldlabs-ai/shieldlabs-mcp:<version> --transport http --mode public --host 0.0.0.0
+```
+
+It speaks plain HTTP: put a TLS proxy in front of it, and let only that proxy reach the port.
+Rate limits are kept in memory per process, and request logs go to stdout, one JSON line per
+request.
+
+The per-address limits use the address of each TCP connection, which behind a proxy is the
+proxy's for every client. Add `--trust-proxy` to take the client address from `CF-Connecting-IP`
+instead: the proxy must then set that header on every request, replacing any value the client
+sent. Cloudflare sets it; with nginx, use `proxy_set_header CF-Connecting-IP $remote_addr;`.
 
 ## Development
 
@@ -352,6 +489,8 @@ npm test -- --coverage
 npm run build
 node dist/index.js --help
 npm run smoke            # the built server over stdio against the fake History API
+npm run test:worker      # the hosted mode in workerd (Node.js 22 or later)
+npm run worker:check     # the Worker bundle: no Node.js built-in module, size limit
 ```
 
 `@shieldlabs-ai/node` is bundled into `dist/` at build time, so the published package depends only on

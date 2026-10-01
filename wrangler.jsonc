@@ -1,0 +1,73 @@
+// Public (hosted, multi-tenant) mode of the ShieldLabs MCP server on Cloudflare Workers.
+//
+// Every command names its environment, dev or production:
+//   npx wrangler secret put MCP_GATEWAY_KEY --env dev   (once per environment, before the first deploy)
+//   npx wrangler deploy --env dev                       https://dev.mcp.shieldlabs.ai/mcp
+//   npx wrangler deploy --env production                https://mcp.shieldlabs.ai/mcp
+//
+// MCP_GATEWAY_KEY is "kid:secret", the entry for this server in MCP_GATEWAY_KEYS of the account API
+// of the same environment. It is a secret of each Worker and never committed: without it the
+// Worker answers 500 and its log line names the variable. The top level repeats the dev settings,
+// so a deploy without --env updates Development, never Production. Local runs read overrides from
+// a .dev.vars file, which is not committed.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shieldlabs-mcp-dev",
+  "main": "src/worker.ts",
+  // The newest date the pinned wrangler runtime supports, so local runs, tests and deploys agree.
+  "compatibility_date": "2026-08-15",
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "workers_dev": false,
+  "routes": [{ "pattern": "dev.mcp.shieldlabs.ai", "custom_domain": true }],
+  "vars": {
+    "SHIELDLABS_PUBLIC_ORIGIN": "https://dev.mcp.shieldlabs.ai",
+    "SHIELDLABS_AUTH_ISSUER": "https://dev.account.shieldlabs.ai",
+    "SHIELDLABS_PORTAL_URL": "https://dev.account.shieldlabs.ai",
+  },
+  "ratelimits": [
+    { "name": "RL_TOKEN", "namespace_id": "7201", "simple": { "limit": 120, "period": 60 } },
+    { "name": "RL_ANON", "namespace_id": "7202", "simple": { "limit": 60, "period": 60 } },
+    { "name": "RL_TOKEN_CHECK", "namespace_id": "7203", "simple": { "limit": 300, "period": 60 } },
+  ],
+  "env": {
+    // Settings are not inherited from the top level: every one is repeated on purpose.
+    "dev": {
+      "name": "shieldlabs-mcp-dev",
+      "workers_dev": false,
+      "routes": [{ "pattern": "dev.mcp.shieldlabs.ai", "custom_domain": true }],
+      "vars": {
+        "SHIELDLABS_PUBLIC_ORIGIN": "https://dev.mcp.shieldlabs.ai",
+        "SHIELDLABS_AUTH_ISSUER": "https://dev.account.shieldlabs.ai",
+        "SHIELDLABS_PORTAL_URL": "https://dev.account.shieldlabs.ai",
+      },
+      "ratelimits": [
+        { "name": "RL_TOKEN", "namespace_id": "7201", "simple": { "limit": 120, "period": 60 } },
+        { "name": "RL_ANON", "namespace_id": "7202", "simple": { "limit": 60, "period": 60 } },
+        {
+          "name": "RL_TOKEN_CHECK",
+          "namespace_id": "7203",
+          "simple": { "limit": 300, "period": 60 },
+        },
+      ],
+    },
+    "production": {
+      "name": "shieldlabs-mcp",
+      "workers_dev": false,
+      "routes": [{ "pattern": "mcp.shieldlabs.ai", "custom_domain": true }],
+      "vars": {
+        "SHIELDLABS_PUBLIC_ORIGIN": "https://mcp.shieldlabs.ai",
+        "SHIELDLABS_AUTH_ISSUER": "https://account.shieldlabs.ai",
+        "SHIELDLABS_PORTAL_URL": "https://account.shieldlabs.ai",
+      },
+      "ratelimits": [
+        { "name": "RL_TOKEN", "namespace_id": "7101", "simple": { "limit": 120, "period": 60 } },
+        { "name": "RL_ANON", "namespace_id": "7102", "simple": { "limit": 60, "period": 60 } },
+        {
+          "name": "RL_TOKEN_CHECK",
+          "namespace_id": "7103",
+          "simple": { "limit": 300, "period": 60 },
+        },
+      ],
+    },
+  },
+}

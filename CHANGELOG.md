@@ -4,6 +4,31 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the package uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Public mode, for the hosted multi-tenant server (`--transport http --mode public`, or the
+  Cloudflare Worker entry `src/worker.ts`). Users connect by signing in with their ShieldLabs
+  account (OAuth); a request without an access token gets a 401 with the `resource_metadata`
+  challenge, and the protected resource metadata (RFC 9728, without scopes) is served at
+  `/.well-known/oauth-protected-resource/mcp` and `/.well-known/oauth-protected-resource`.
+- Every access token (`slat_...`) is checked with `GET /mcp/v1/ping` of the ShieldLabs account
+  API, signed with the `X-Shield-Gateway` header (key `MCP_GATEWAY_KEY`, a fresh nonce per
+  request). An accepted token is remembered for 60 seconds under its SHA-256 hash; refusals are
+  never remembered. Any other credential, API keys included, gets the 401 without being sent
+  anywhere: API keys are a later step.
+- In this release public mode offers one tool, `shieldlabs_check_connection`, and no prompts or
+  resources; the identification tools follow when the account API serves them to the hosted
+  server. Local and single-tenant HTTP modes are unchanged.
+- CORS and Origin checks for browser clients, one JSON-RPC message per request, rate limits per
+  token and per address (pings for tokens that are not in the cache are limited per address before
+  the account API is asked), and one JSON log line per request without tokens, signatures or
+  bodies.
+- `wrangler.jsonc` with the `dev` (`dev.mcp.shieldlabs.ai`) and `production`
+  (`mcp.shieldlabs.ai`) environments, Worker tests in workerd (`npm run test:worker`), a bundle
+  check (`npm run worker:check`), `--trust-proxy` for the container, and `examples/hosted`.
+
 ## [1.0.0] - 2026-09-30
 
 First release.

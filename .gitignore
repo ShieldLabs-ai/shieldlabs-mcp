@@ -10,3 +10,6 @@ coverage/
 .history
 .vscode/
 .idea/
+.wrangler/
+.dev.vars*
+dist-worker/

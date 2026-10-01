@@ -1,8 +1,10 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
     include: ['test/**/*.test.ts'],
+    // Worker runtime tests run in workerd: npm run test:worker (vitest.worker.config.ts).
+    exclude: [...configDefaults.exclude, 'test/worker/**'],
     environment: 'node',
     restoreMocks: true,
     unstubGlobals: true,

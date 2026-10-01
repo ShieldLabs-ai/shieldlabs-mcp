@@ -18,10 +18,14 @@ npm run typecheck
 npm run lint            # eslint and prettier --check
 npm test -- --coverage  # coverage must stay at or above 85 %
 npm run build && node dist/index.js --help
+npm run test:worker     # the hosted mode in the Workers runtime (Node.js 22 or later)
+npm run worker:check    # bundles like wrangler deploy --dry-run --env dev; no Node.js built-ins
 ```
 
-The CI workflow runs the same commands on Node.js 20, 22 and 24, plus the stdio smoke test
-(`npm run smoke`).
+The CI workflow runs the commands above on Node.js 20, 22 and 24, plus the stdio smoke test
+(`npm run smoke`). It does not run the two Worker commands yet: run them yourself, on Node.js 22
+or later, before you open a pull request that touches `src/public/`, `src/worker.ts` or
+`wrangler.jsonc`. They do not need `@shieldlabs-ai/node`.
 
 ## Guidelines
 
@@ -33,6 +37,15 @@ The CI workflow runs the same commands on Node.js 20, 22 and 24, plus the stdio 
 - Every History API request goes through the client built in `createContext()`, so it stays
   within the process-wide request budget.
 - Never log or return keys or secrets.
+- Public mode (`src/public/`, `src/worker.ts`) accepts ShieldLabs access tokens (`slat_...`) only
+  and checks each one with `GET /mcp/v1/ping` of the account API, signed with `MCP_GATEWAY_KEY`
+  and a fresh nonce per request (`src/public/gateway.ts`; its test pins the signature vector of
+  the account API). It offers `shieldlabs_check_connection` only: the account API has no MCP data
+  methods yet, and access tokens are not accepted on the History API. API keys are a later step.
+- Code reachable from `src/worker.ts` runs on Cloudflare Workers: use Web APIs (`fetch`,
+  `crypto.subtle`, streams), not Node.js modules, and do not import `src/context.ts` or
+  `@shieldlabs-ai/node`; `npm run worker:check` fails on a Node.js import. Nothing may outlive a
+  request except the cache of accepted tokens, keyed by the SHA-256 of the token.
 - Tests use the shared fixtures in `test/fixtures/` and the mock dataset in `test/mock-data/`. Do
   not edit either by hand: change `scripts/generate-mock-data.mjs` and run it, and keep
   `evaluation.xml` in line (its test answers every question through the tools).

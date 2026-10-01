@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "shieldlabs": {
+      "type": "http",
+      "url": "https://mcp.shieldlabs.ai/mcp"
+    }
+  }
+}
