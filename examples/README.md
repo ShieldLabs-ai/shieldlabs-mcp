@@ -2,6 +2,7 @@
 
 | Folder | Client |
 |---|---|
+| [`hosted`](hosted) | The hosted server at `https://mcp.shieldlabs.ai/mcp`: sign in, nothing to run |
 | [`claude-desktop`](claude-desktop) | Claude Desktop (`claude_desktop_config.json`) |
 | [`claude-code`](claude-code) | Claude Code (`claude mcp add`, project `.mcp.json`) |
 | [`cursor`](cursor) | Cursor (`.cursor/mcp.json`) |
