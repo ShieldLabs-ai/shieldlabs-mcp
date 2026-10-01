@@ -2,10 +2,14 @@ import type { Readable, Writable } from 'node:stream';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ShieldLabsError } from '@shieldlabs-ai/node';
 import { buildServerConfig, HELP_TEXT, parseArgs, UsageError, type CliOptions } from './config.js';
-import { SERVER_VERSION, TOOL_NAMES } from './constants.js';
+import { MCP_HTTP_PATH, SERVER_VERSION, TOOL_NAMES } from './constants.js';
 import { createContext, redact, type ContextDependencies, type ServerContext } from './context.js';
 import { generateToken, isLoopbackHost, startHttpServer, type RunningHttpServer } from './http.js';
 import { createLogger, type Logger } from './log.js';
+import { PublicConfigError, publicConfigFromEnv, type PublicConfig } from './public/config.js';
+import type { PublicDependencies } from './public/handler.js';
+import { startPublicHttpServer } from './public/node.js';
+import { CHECK_CONNECTION_TOOL } from './public/server.js';
 import { createShieldLabsServer } from './server.js';
 
 export interface MainOptions {
@@ -15,12 +19,20 @@ export interface MainOptions {
   /** stdin for the stdio transport. Default: process.stdin. */
   stdin?: Readable;
   deps?: ContextDependencies;
+  /** Overrides of --mode public, for tests. */
+  publicDeps?: Pick<PublicDependencies, 'fetch' | 'now' | 'nonce'>;
 }
 
 /** A running server started by main(). */
 export interface Started {
   mode: 'stdio' | 'http';
+  /**
+   * The context of the server. With --mode public every request builds its own server; this
+   * context has no tools.
+   */
   context: ServerContext;
+  /** The settings of --mode public. Absent locally. */
+  public?: PublicConfig;
   http?: RunningHttpServer;
   close(): Promise<void>;
 }
@@ -104,6 +116,93 @@ async function startHttp(options: CliOptions, ctx: ServerContext, log: Logger): 
   return { mode: 'http', context: ctx, http, close: () => http.close() };
 }
 
+/** Settings of the local mode that --mode public does not use. */
+const LOCAL_SETTINGS = [
+  'SHIELDLABS_API_KEY',
+  'SHIELDLABS_SECRET_KEY',
+  'SHIELDLABS_DOMAIN',
+  'SHIELDLABS_WEBHOOK_SECRET',
+  'SHIELDLABS_API_BASE_URL',
+  'SHIELDLABS_MANAGEMENT_BASE_URL',
+  'SHIELDLABS_MCP_TOKEN',
+];
+
+/** An exit code for an address the server cannot listen on; rethrows other errors. */
+function cannotListen(error: unknown, cli: CliOptions, log: Logger): MainResult {
+  const code = (error as { code?: unknown }).code;
+  if (code === 'EADDRINUSE' || code === 'EACCES' || code === 'EADDRNOTAVAIL') {
+    log(
+      `Cannot listen on ${cli.host}:${cli.port} (${String(code)}). Choose another port with --port or another address with --host.`,
+    );
+    return { exitCode: 1 };
+  }
+  throw error;
+}
+
+/** --mode public: the hosted multi-tenant server over HTTP, for a container behind a TLS proxy. */
+async function startPublic(
+  cli: CliOptions,
+  options: MainOptions,
+  log: Logger,
+): Promise<MainResult> {
+  const refusal =
+    cli.transport !== 'http'
+      ? '--mode public serves streamable HTTP only: add --transport http.'
+      : cli.allowedOrigins.length > 0
+        ? '--allowed-origins does not apply to --mode public, which accepts browser clients on https origins and on http://localhost.'
+        : cli.tools !== undefined
+          ? `--tools does not apply to --mode public, which offers ${CHECK_CONNECTION_TOOL} only.`
+          : undefined;
+  if (refusal !== undefined) {
+    log(`${refusal} Run shieldlabs-mcp --help for usage.`);
+    return { exitCode: 2 };
+  }
+  let config: PublicConfig;
+  try {
+    config = publicConfigFromEnv(options.env);
+  } catch (error) {
+    if (error instanceof PublicConfigError) {
+      log(`Configuration error. ${error.message}`);
+      return { exitCode: 2 };
+    }
+    throw error;
+  }
+  const ignored = LOCAL_SETTINGS.filter((name) => (options.env[name]?.trim() ?? '') !== '');
+  if (ignored.length > 0) {
+    log(`--mode public ignores ${ignored.join(', ')}: every request brings its own access token.`);
+  }
+
+  let http: RunningHttpServer;
+  try {
+    http = await startPublicHttpServer({
+      host: cli.host,
+      port: cli.port,
+      config,
+      trustProxy: cli.trustProxy === true,
+      log,
+      requestLog: (line) => options.stdout.write(`${line}\n`),
+      ...(options.publicDeps === undefined ? {} : { deps: options.publicDeps }),
+    });
+  } catch (error) {
+    return cannotListen(error, cli, log);
+  }
+  log(
+    `ShieldLabs MCP server ${SERVER_VERSION} listening on ${http.url} in public mode (clients connect to ${config.publicOrigin}${MCP_HTTP_PATH}; access tokens are checked by ${config.portalUrl}). Request logs go to stdout.`,
+  );
+  if (!isLoopbackHost(cli.host)) {
+    log(`Bound to ${cli.host}: put TLS in front of the server, which speaks plain HTTP.`);
+  }
+  log(
+    cli.trustProxy === true
+      ? 'Client addresses come from CF-Connecting-IP (--trust-proxy): the proxy in front must set it, replacing any value the client sent, and only the proxy may reach this port.'
+      : 'Per-address rate limits use the address of each TCP connection. Behind a proxy, every client shares the address of the proxy: add --trust-proxy and have the proxy set CF-Connecting-IP.',
+  );
+  const context = createContext(buildServerConfig({}, { tools: [], offline: true }));
+  return {
+    started: { mode: 'http', context, public: config, http, close: () => http.close() },
+  };
+}
+
 async function startStdio(
   ctx: ServerContext,
   log: Logger,
@@ -142,6 +241,13 @@ export async function main(argv: readonly string[], options: MainOptions): Promi
     options.stdout.write(`${SERVER_VERSION}\n`);
     return { exitCode: 0 };
   }
+  if (cli.mode === 'public') return startPublic(cli, options, log);
+  if (cli.trustProxy === true) {
+    log(
+      '--trust-proxy applies to --mode public only, which limits requests per client address. Run shieldlabs-mcp --help for usage.',
+    );
+    return { exitCode: 2 };
+  }
 
   // Over HTTP one server can serve several clients: the setup prompt never fetches remote text there.
   const config = buildServerConfig(options.env, {
@@ -172,13 +278,6 @@ export async function main(argv: readonly string[], options: MainOptions): Promi
   try {
     return { started: await startHttp(cli, ctx, log) };
   } catch (error) {
-    const code = (error as { code?: unknown }).code;
-    if (code === 'EADDRINUSE' || code === 'EACCES' || code === 'EADDRNOTAVAIL') {
-      log(
-        `Cannot listen on ${cli.host}:${cli.port} (${String(code)}). Choose another port with --port or another address with --host.`,
-      );
-      return { exitCode: 1 };
-    }
-    throw error;
+    return cannotListen(error, cli, log);
   }
 }

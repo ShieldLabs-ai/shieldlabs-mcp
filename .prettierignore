@@ -6,3 +6,5 @@ test/fixtures/
 test/mock-data/
 *.md
 package-lock.json
+.wrangler/
+dist-worker/

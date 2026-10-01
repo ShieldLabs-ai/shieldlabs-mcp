@@ -7,7 +7,7 @@ import { defineConfig } from 'eslint/config';
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig(
-  { ignores: ['dist/', 'coverage/', 'node_modules/', '.deps/'] },
+  { ignores: ['dist/', 'coverage/', 'node_modules/', '.deps/', '.wrangler/', 'dist-worker/'] },
   js.configs.recommended,
   {
     files: ['**/*.ts', '**/*.mts'],

@@ -13,6 +13,9 @@ export class UsageError extends Error {
 
 export type TransportKind = 'stdio' | 'http';
 
+/** local: one configured key (default). public: hosted, multi-tenant; a token per request. */
+export type ServerMode = 'local' | 'public';
+
 /** Parsed command-line flags. */
 export interface CliOptions {
   transport: TransportKind;
@@ -23,6 +26,13 @@ export interface CliOptions {
   tools: ToolName[] | undefined;
   /** Never fetch remote content (the integrate_shieldlabs prompt uses its built-in guide). */
   offline: boolean;
+  /** Serving mode, when --mode is given. Absent means local. */
+  mode?: ServerMode;
+  /**
+   * --mode public: take client addresses from CF-Connecting-IP, set by the proxy in front. Absent
+   * means the address of the TCP connection.
+   */
+  trustProxy?: boolean;
   help: boolean;
   version: boolean;
 }
@@ -44,8 +54,15 @@ export interface ServerConfig extends ShieldLabsSettings {
   offline: boolean;
 }
 
-const VALUE_FLAGS = new Set(['--transport', '--port', '--host', '--allowed-origins', '--tools']);
-const BOOLEAN_FLAGS = new Set(['--offline', '--help', '-h', '--version', '-v']);
+const VALUE_FLAGS = new Set([
+  '--transport',
+  '--mode',
+  '--port',
+  '--host',
+  '--allowed-origins',
+  '--tools',
+]);
+const BOOLEAN_FLAGS = new Set(['--offline', '--trust-proxy', '--help', '-h', '--version', '-v']);
 
 function parsePort(value: string): number {
   if (!/^\d{1,5}$/.test(value) || Number(value) > 65_535) {
@@ -111,6 +128,7 @@ export function parseArgs(argv: readonly string[]): CliOptions {
     if (BOOLEAN_FLAGS.has(flag)) {
       if (flag !== arg) throw new UsageError(`${flag} does not take a value.`);
       if (flag === '--offline') options.offline = true;
+      else if (flag === '--trust-proxy') options.trustProxy = true;
       else if (flag === '--help' || flag === '-h') options.help = true;
       else options.version = true;
       continue;
@@ -138,6 +156,12 @@ export function parseArgs(argv: readonly string[]): CliOptions {
           throw new UsageError(`--transport must be "stdio" or "http", got "${value}".`);
         }
         options.transport = value;
+        break;
+      case '--mode':
+        if (value !== 'local' && value !== 'public') {
+          throw new UsageError(`--mode must be "local" or "public", got "${value}".`);
+        }
+        options.mode = value;
         break;
       case '--port':
         options.port = parsePort(value);
@@ -209,6 +233,9 @@ Every tool is read-only.
 
 Options:
   --transport <stdio|http>   Transport to serve (default: stdio)
+  --mode <local|public>      local (default): the tools read with the configured keys.
+                             public: the hosted multi-tenant server, every request
+                             brings a ShieldLabs access token (needs --transport http)
   --port <number>            Port for --transport http (default: ${DEFAULT_HTTP_PORT})
   --host <address>           Bind address for --transport http (default: ${DEFAULT_HTTP_HOST})
   --allowed-origins <list>   Comma-separated browser origins allowed to call the HTTP
@@ -217,6 +244,9 @@ Options:
                              without the shieldlabs_ prefix (default: every available tool)
   --offline                  Never fetch remote content: the integrate_shieldlabs prompt
                              uses its built-in guide (always the case with --transport http)
+  --trust-proxy              --mode public: rate limit per client address from the
+                             CF-Connecting-IP header, which the proxy in front must set
+                             (default: the address of the TCP connection)
   -h, --help                 Show this help and exit
   -v, --version              Show the version and exit
 
@@ -234,6 +264,13 @@ Environment:
                                   plain http only for localhost, 127.0.0.1 and [::1])
   SHIELDLABS_MCP_TOKEN            Bearer token required by --transport http (generated and
                                   printed once to stderr when unset)
+
+Environment of --mode public (the settings above are not used):
+  SHIELDLABS_PUBLIC_ORIGIN        Origin clients connect to, e.g. https://mcp.shieldlabs.ai
+  SHIELDLABS_PORTAL_URL           ShieldLabs account API that checks every access token,
+                                  e.g. https://account.shieldlabs.ai
+  SHIELDLABS_AUTH_ISSUER          OAuth authorization server (default: SHIELDLABS_PORTAL_URL)
+  MCP_GATEWAY_KEY                 kid:secret that signs every request to the account API
 
 Tools:
   ${ALL_TOOL_NAMES.join('\n  ')}
