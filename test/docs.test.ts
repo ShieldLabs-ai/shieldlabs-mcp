@@ -144,7 +144,6 @@ describe('documentation style', () => {
       'CHANGELOG.md',
       'CONTRIBUTING.md',
       'server.json',
-      'evaluation.xml',
       'Dockerfile',
       'package.json',
       ...filesUnder('examples'),

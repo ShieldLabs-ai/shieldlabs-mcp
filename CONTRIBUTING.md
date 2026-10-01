@@ -47,8 +47,7 @@ or later, before you open a pull request that touches `src/public/`, `src/worker
   `@shieldlabs-ai/node`; `npm run worker:check` fails on a Node.js import. Nothing may outlive a
   request except the cache of accepted tokens, keyed by the SHA-256 of the token.
 - Tests use the shared fixtures in `test/fixtures/` and the mock dataset in `test/mock-data/`. Do
-  not edit either by hand: change `scripts/generate-mock-data.mjs` and run it, and keep
-  `evaluation.xml` in line (its test answers every question through the tools).
+  not edit either by hand: change `scripts/generate-mock-data.mjs` and run it.
 - Documentation style: plain technical English, "risk signals" for the weighted reasons behind a
   score, and the three risk bands trusted 0-29, suspicious 30-59, dangerous 60-100.
 - Use conventional commit messages (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`).
