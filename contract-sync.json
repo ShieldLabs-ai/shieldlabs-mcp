@@ -1,0 +1,19 @@
+{
+  "source": "shieldlabs-openapi",
+  "files": {
+    "error-responses.json": "test/fixtures/error-responses.json",
+    "history-empty.json": "test/fixtures/history-empty.json",
+    "history-page.json": "test/fixtures/history-page.json",
+    "management-profile-expected.json": "test/fixtures/management-profile-expected.json",
+    "management-profile.json": "test/fixtures/management-profile.json",
+    "normalization-cases.json": "test/fixtures/normalization-cases.json",
+    "risk-band-cases.json": "test/fixtures/risk-band-cases.json",
+    "webhook-identification-scored.json": "test/fixtures/webhook-identification-scored.json",
+    "webhook-identification-scored.raw.txt": "test/fixtures/webhook-identification-scored.raw.txt",
+    "webhook-ping.json": "test/fixtures/webhook-ping.json",
+    "webhook-ping.raw.txt": "test/fixtures/webhook-ping.raw.txt",
+    "webhook-rate-limited.json": "test/fixtures/webhook-rate-limited.json",
+    "webhook-signature-vectors.json": "test/fixtures/webhook-signature-vectors.json",
+    "webhook-test-delivery.json": "test/fixtures/webhook-test-delivery.json"
+  }
+}

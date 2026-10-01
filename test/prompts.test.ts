@@ -217,11 +217,11 @@ describe('investigate_user and review_request', () => {
     const review = promptText(
       await connected.client.getPrompt({
         name: 'review_request',
-        arguments: { request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b' },
+        arguments: { request_id: 'a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d' },
       }),
     );
     expect(review).toContain(
-      `1. Call ${TOOL_NAMES.getIdentification} with request_id="02f1d973-84db-4156-a7f7-e799e6bf389b"`,
+      `1. Call ${TOOL_NAMES.getIdentification} with request_id="a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d"`,
     );
     expect(review).toContain(TOOL_NAMES.currentTime);
     expect(review).toContain(
@@ -251,7 +251,7 @@ describe('investigate_user and review_request', () => {
     const review = promptText(
       await connected.client.getPrompt({
         name: 'review_request',
-        arguments: { request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b' },
+        arguments: { request_id: 'a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d' },
       }),
     );
     expect(review).not.toContain(TOOL_NAMES.explainRiskScore);

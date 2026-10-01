@@ -20,4 +20,4 @@ claude mcp add --transport http shieldlabs http://127.0.0.1:8787/mcp \
 ```
 
 Check the connection with `claude mcp list`, then ask for example: "Review the ShieldLabs request
-02f1d973-84db-4156-a7f7-e799e6bf389b" or run the prompt `/mcp__shieldlabs__review_request`.
+a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d" or run the prompt `/mcp__shieldlabs__review_request`.

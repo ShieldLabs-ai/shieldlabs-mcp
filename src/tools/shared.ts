@@ -15,9 +15,9 @@ export type ResponseFormat = z.infer<typeof ResponseFormatSchema>;
 
 export const RequestIdSchema = z
   .string()
-  .regex(UUID_PATTERN, 'request_id must be a UUID such as 02f1d973-84db-4156-a7f7-e799e6bf389b')
+  .regex(UUID_PATTERN, 'request_id must be a UUID such as a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d')
   .describe(
-    'Request ID of one identification: the UUID the browser agent returned for the protected action, for example "02f1d973-84db-4156-a7f7-e799e6bf389b"',
+    'Request ID of one identification: the UUID the browser agent returned for the protected action, for example "a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d"',
   );
 
 /** Tool annotations shared by every tool: all are read-only and repeatable. */

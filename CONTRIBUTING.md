@@ -48,7 +48,11 @@ or later, before you open a pull request that touches `src/public/`, `src/worker
   request except the cache of accepted tokens, keyed by the SHA-256 of the token.
 - Tests use the shared fixtures in `test/fixtures/` and the mock dataset in `test/mock-data/`. Do
   not edit either by hand: change `scripts/generate-mock-data.mjs` and run it, and keep
-  `evaluation.xml` in line (its test answers every question through the tools).
+  `evaluation.xml` in line (its test answers every question through the tools). The shared
+  fixtures are synced from `contract/` in shieldlabs-openapi: `contract-sync.json` maps each file,
+  `.shieldlabs-contract.lock` records the release, CI runs
+  `python3 scripts/sync_contract.py --check`, and the `contract-sync.yml` workflow opens a pull
+  request when a new release changes them.
 - Documentation style: plain technical English, "risk signals" for the weighted reasons behind a
   score, and the three risk bands trusted 0-29, suspicious 30-59, dangerous 60-100.
 - Use conventional commit messages (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`).

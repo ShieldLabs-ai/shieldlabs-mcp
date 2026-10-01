@@ -34,7 +34,7 @@ describe('shieldlabs_explain_risk_score', () => {
       identification: scored,
     });
     expect(output).toMatchObject({
-      request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b',
+      request_id: 'a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d',
       risk_score: 80,
       risk_band: 'dangerous',
       band_range: '60-100',
@@ -155,10 +155,10 @@ describe('shieldlabs_explain_risk_score', () => {
     const attempts: [Record<string, unknown>, string][] = [
       [{}, 'give exactly one of request_id'],
       [
-        { request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b', identification: {} },
+        { request_id: 'a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d', identification: {} },
         'give exactly one of request_id',
       ],
-      [{ request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b' }, 'SHIELDLABS_API_KEY is not set'],
+      [{ request_id: 'a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d' }, 'SHIELDLABS_API_KEY is not set'],
       [{ identification: '{not json' }, 'not valid JSON'],
       [{ identification: '[1,2]' }, 'must be a JSON object'],
       [{ identification: ping }, 'carries no identification'],

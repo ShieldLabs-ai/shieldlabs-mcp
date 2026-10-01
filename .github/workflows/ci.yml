@@ -72,3 +72,13 @@ jobs:
 
       - name: Check the published file list
         run: npm pack --dry-run
+
+  contract:
+    name: Shared contract files match the lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - name: Contract files match .shieldlabs-contract.lock
+        run: python3 scripts/sync_contract.py --check

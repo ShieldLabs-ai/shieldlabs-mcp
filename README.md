@@ -16,7 +16,7 @@ MCP server that lets AI assistants read ShieldLabs identifications, search their
    the identifiers (for example, how many accounts one device has opened).
 
 This server puts steps 2 and 3 in reach of an MCP client such as Claude Desktop, Claude Code,
-Cursor or VS Code: ask "review request 02f1d973-..." or "which accounts used this device?" and the
+Cursor or VS Code: ask "review request a5b7c9d1-..." or "which accounts used this device?" and the
 assistant reads the answers from the History API. Every tool is read-only. New to ShieldLabs?
 Start free at [app.shieldlabs.ai](https://app.shieldlabs.ai).
 

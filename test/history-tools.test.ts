@@ -85,7 +85,7 @@ describe('shieldlabs_get_identification', () => {
   it('renders markdown with quoted values, bands, flags and traffic source', async () => {
     connected = await connectToFixtureRows();
     const result = await callTool(connected.client, TOOL_NAMES.getIdentification, {
-      request_id: '02F1D973-84DB-4156-A7F7-E799E6BF389B',
+      request_id: 'A5B7C9D1-E3F5-4A7B-9C1D-3E5F7A9B1C3D',
     });
     expect(result.isError).toBeFalsy();
     const text = textOf(result);
@@ -172,7 +172,7 @@ describe('shieldlabs_get_identification', () => {
   });
 
   describe('waiting for the verdict', () => {
-    const requestId = '02f1d973-84db-4156-a7f7-e799e6bf389b';
+    const requestId = 'a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d';
 
     it('keeps polling through a 429 and a network error and returns the row once it is stored', async () => {
       const api = failFirst([{ status: 429, headers: { 'retry-after': '0' } }, 'network']);
@@ -248,7 +248,7 @@ describe('shieldlabs_get_identification', () => {
     for (const index of [0, 1]) {
       connected = await connect(FULL_ENV, { apiFetch: historyError(401, index).fetch });
       const result = await callTool(connected.client, TOOL_NAMES.getIdentification, {
-        request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b',
+        request_id: 'a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d',
       });
       expect(result.isError).toBe(true);
       const text = textOf(result);
@@ -267,7 +267,7 @@ describe('shieldlabs_get_identification', () => {
       }).fetch,
     });
     const result = await callTool(connected.client, TOOL_NAMES.getIdentification, {
-      request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b',
+      request_id: 'a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d',
       wait: false,
     });
     expect(result.isError).toBe(true);
@@ -287,7 +287,7 @@ describe('shieldlabs_get_identification', () => {
     for (const [apiFetch, message] of expectations) {
       connected = await connect(FULL_ENV, { apiFetch });
       const result = await callTool(connected.client, TOOL_NAMES.getIdentification, {
-        request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b',
+        request_id: 'a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d',
         wait: false,
       });
       expect(result.isError).toBe(true);

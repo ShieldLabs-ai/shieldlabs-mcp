@@ -174,7 +174,7 @@ describe('documentation style', () => {
           prompt.name === 'investigate_user'
             ? { user_hid: 'a91f3c7e5b2d4086' }
             : prompt.name === 'review_request'
-              ? { request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b' }
+              ? { request_id: 'a5b7c9d1-e3f5-4a7b-9c1d-3e5f7a9b1c3d' }
               : {};
         expectHouseStyle(
           prompt.name,
