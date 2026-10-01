@@ -514,29 +514,6 @@ npx @modelcontextprotocol/inspector --cli node dist/index.js \
 `npm run smoke` does the same without extra downloads: it starts the fake API, runs the built
 server over stdio with the MCP SDK client and calls its tools, resources and prompts.
 
-### Evaluation
-
-[`evaluation.xml`](evaluation.xml) holds ten realistic questions in the format of the MCP
-builder evaluation harness, answerable from the mock dataset. `test/evaluation.test.ts` answers
-each one through the MCP tools and checks the expected answer, so the file stays correct. To run
-the harness itself (it drives Claude and needs an Anthropic API key):
-
-```bash
-pip install anthropic mcp
-export ANTHROPIC_API_KEY=your_key
-npm run build
-node scripts/mock-history-api.mjs --port 8788 &
-python evaluation.py -t stdio -c node -a dist/index.js \
-  -e SHIELDLABS_API_KEY=sec_evaldata-mockdata-00000001 SHIELDLABS_API_BASE_URL=http://127.0.0.1:8788 \
-  -o evaluation-report.md evaluation.xml
-```
-
-`evaluation.py` is `scripts/evaluation.py` of the mcp-builder skill in
-[github.com/anthropics/skills](https://github.com/anthropics/skills). It imports `connections.py`
-from its own folder, so copy both files into the root of this repository before running the
-command above (they are not part of it), or run it from that `scripts` folder with absolute paths
-to `dist/index.js` and `evaluation.xml`. Pass `-m <model>` to choose the model.
-
 See [CONTRIBUTING.md](CONTRIBUTING.md). Documentation: [docs.shieldlabs.ai](https://docs.shieldlabs.ai).
 Support: [contact@shieldlabs.ai](mailto:contact@shieldlabs.ai).
 
