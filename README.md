@@ -16,7 +16,7 @@ MCP server that lets AI assistants read ShieldLabs identifications, search their
    the identifiers (for example, how many accounts one device has opened).
 
 This server puts steps 2 and 3 in reach of an MCP client such as Claude Desktop, Claude Code,
-Cursor or VS Code: ask "review request 02f1d973-..." or "which accounts used this device?" and the
+Grok, Cursor or VS Code: ask "review request 02f1d973-..." or "which accounts used this device?" and the
 assistant reads the answers from the History API. Every tool is read-only. New to ShieldLabs?
 Start free at [app.shieldlabs.ai](https://app.shieldlabs.ai).
 
@@ -39,6 +39,19 @@ start). A container image is published as `ghcr.io/shieldlabs-ai/shieldlabs-mcp`
 
    ```bash
    claude mcp add --transport stdio shieldlabs --env SHIELDLABS_API_KEY=sec_your_private_key -- npx -y @shieldlabs-ai/mcp
+   ```
+
+   **Grok** (the same local server; `~/.grok/config.toml` or `.grok/config.toml`)
+
+   ```bash
+   grok mcp add shieldlabs -e SHIELDLABS_API_KEY='${SHIELDLABS_API_KEY}' -- npx -y @shieldlabs-ai/mcp
+   ```
+
+   ```toml
+   [mcp_servers.shieldlabs]
+   command = "npx"
+   args = ["-y", "@shieldlabs-ai/mcp"]
+   env = { SHIELDLABS_API_KEY = "${SHIELDLABS_API_KEY}" }
    ```
 
    **Claude Desktop** (`claude_desktop_config.json`), **Cursor** (`.cursor/mcp.json`) and other

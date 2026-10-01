@@ -12,7 +12,16 @@ files, so they can be committed.
 
 In Claude, add a custom connector with the same URL under **Customize > Connectors**. With Claude
 Code, `claude mcp add --transport http shieldlabs https://mcp.shieldlabs.ai/mcp` does the same as
-the project file for your user.
+the project file for your user. In Grok:
+
+```bash
+grok mcp add --transport http shieldlabs https://mcp.shieldlabs.ai/mcp
+```
+
+```toml
+[mcp_servers.shieldlabs]
+url = "https://mcp.shieldlabs.ai/mcp"
+```
 
 In this release the hosted server offers one tool, `shieldlabs_check_connection`, which confirms
 that the sign-in works. The tools that read identifications follow in a later release; until then,

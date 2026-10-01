@@ -8,6 +8,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- A Grok client example (`examples/grok`) for the same local server Claude Code starts, plus the
+  hosted URL for Grok. The hosted server still only offers `shieldlabs_check_connection`.
 - Public mode, for the hosted multi-tenant server (`--transport http --mode public`, or the
   Cloudflare Worker entry `src/worker.ts`). Users connect by signing in with their ShieldLabs
   account (OAuth); a request without an access token gets a 401 with the `resource_metadata`
