@@ -1,6 +1,6 @@
 name: Release
 
-# Publishes @shieldlabs/mcp to npm and the image to ghcr.io when a maintainer pushes a tag such as
+# Publishes @shieldlabs-ai/mcp to npm and the image to ghcr.io when a maintainer pushes a tag such as
 # v1.0.0. The build job checks, builds and packs with read-only permissions; the publish jobs run
 # in the "npm" and "ghcr" environments (add required reviewers to them in the repository settings)
 # and need the NPM_TOKEN secret (the image uses the built-in GITHUB_TOKEN). Safe to re-run: a
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  # The @shieldlabs/node release bundled into dist/: release it (tag v1.0.0 in its repository)
+  # The @shieldlabs-ai/node release bundled into dist/: release it (tag v1.0.0 in its repository)
   # before releasing this package.
   SHIELDLABS_NODE_REF: v1.0.0
 
@@ -53,20 +53,20 @@ jobs:
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and pack @shieldlabs/node
+      - name: Build and pack @shieldlabs-ai/node
         working-directory: .deps/shieldlabs-node
         run: |
           version="$(node -p "require('./package.json').version")"
           case "$version" in
             1.*) ;;
             *)
-              echo "::error::@shieldlabs/node at $SHIELDLABS_NODE_REF is version $version; this server needs 1.x."
+              echo "::error::@shieldlabs-ai/node at $SHIELDLABS_NODE_REF is version $version; this server needs 1.x."
               exit 1
               ;;
           esac
           npm ci
           npm pack --pack-destination ..
-          echo "SHIELDLABS_NODE_TGZ=.deps/shieldlabs-node-$version.tgz" >> "$GITHUB_ENV"
+          echo "SHIELDLABS_NODE_TGZ=.deps/shieldlabs-ai-node-$version.tgz" >> "$GITHUB_ENV"
 
       - run: npm ci
       - run: npm install --no-save "$SHIELDLABS_NODE_TGZ"
@@ -79,13 +79,13 @@ jobs:
       - name: Smoke test over stdio against the fake History API
         run: npm run smoke
 
-      # dist/ is built and bundles @shieldlabs/node: pack it without running the build again.
+      # dist/ is built and bundles @shieldlabs-ai/node: pack it without running the build again.
       - run: npm pack --ignore-scripts
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: package
-          path: shieldlabs-mcp-${{ steps.version.outputs.version }}.tgz
+          path: shieldlabs-ai-mcp-${{ steps.version.outputs.version }}.tgz
           if-no-files-found: error
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -117,11 +117,11 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          if [ "$(npm view "@shieldlabs/mcp@${VERSION}" version 2>/dev/null)" = "${VERSION}" ]; then
-            echo "@shieldlabs/mcp@${VERSION} is already on npm: nothing to publish."
+          if [ "$(npm view "@shieldlabs-ai/mcp@${VERSION}" version 2>/dev/null)" = "${VERSION}" ]; then
+            echo "@shieldlabs-ai/mcp@${VERSION} is already on npm: nothing to publish."
             exit 0
           fi
-          npm publish "shieldlabs-mcp-${VERSION}.tgz" --provenance --access public
+          npm publish "shieldlabs-ai-mcp-${VERSION}.tgz" --provenance --access public
 
   image:
     name: Push the container image

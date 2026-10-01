@@ -1,4 +1,4 @@
-import type { FetchLike, FetchRequestInit } from '@shieldlabs/node';
+import type { FetchLike, FetchRequestInit } from '@shieldlabs-ai/node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MOCK_PROFILE } from '../scripts/generate-mock-data.mjs';
 import { CHARACTER_LIMIT, TOOL_NAMES } from '../src/constants.js';

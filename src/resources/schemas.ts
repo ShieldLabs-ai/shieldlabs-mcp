@@ -1,4 +1,4 @@
-import { SIGNALS } from '@shieldlabs/node';
+import { SIGNALS } from '@shieldlabs-ai/node';
 import { CONNECTION_TYPE_CATALOG } from '../catalog/connection-types.js';
 import { DETECTION_FLAG_CATALOG, DETECTION_FLAG_KEYS } from '../catalog/detection-flags.js';
 import { MAX_SIGNAL_NAME_LENGTH, MAX_VALUE_LENGTH } from '../format.js';

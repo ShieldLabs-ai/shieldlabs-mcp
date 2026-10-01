@@ -1,4 +1,4 @@
-import { NIL_UUID, ShieldLabs, type Identification } from '@shieldlabs/node';
+import { NIL_UUID, ShieldLabs, type Identification } from '@shieldlabs-ai/node';
 import { z } from 'zod';
 import { bandInfo, bandOf, bandRange, RATE_LIMIT_MARKER_NOTE } from './catalog/bands.js';
 import { connectionTypeInfo } from './catalog/connection-types.js';

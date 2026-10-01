@@ -2,7 +2,7 @@
   "mcpServers": {
     "shieldlabs": {
       "command": "npx",
-      "args": ["-y", "@shieldlabs/mcp"],
+      "args": ["-y", "@shieldlabs-ai/mcp"],
       "env": {
         "SHIELDLABS_API_KEY": "${SHIELDLABS_API_KEY}"
       }

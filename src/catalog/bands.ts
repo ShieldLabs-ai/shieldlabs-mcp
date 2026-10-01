@@ -1,4 +1,4 @@
-import { riskBand, type RiskBand } from '@shieldlabs/node';
+import { riskBand, type RiskBand } from '@shieldlabs-ai/node';
 
 export type BandOrMarker = RiskBand | 'rate_limited';
 

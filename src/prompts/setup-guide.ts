@@ -28,7 +28,7 @@ against https://docs.shieldlabs.ai.
 ## 2. Browser: get a request ID
 
 \`\`\`ts
-import { load, type LoadOptions } from '@shieldlabs/js';
+import { load, type LoadOptions } from '@shieldlabs-ai/js';
 
 const options: LoadOptions = { publicKey: import.meta.env.VITE_SHIELDLABS_PUBLIC_KEY };
 load(options).catch(() => {}); // start loading now, but never await it at the top level
@@ -46,7 +46,7 @@ async function submitSignup(form: Record<string, string>, userHidFromYourServer:
 }
 \`\`\`
 
-- The framework packages (@shieldlabs/react, /vue, /angular, /svelte, /next) load the same agent
+- The framework packages (@shieldlabs-ai/react, /vue, /angular, /svelte, /next) load the same agent
   through a provider and offer an identify helper with loading and error state.
 - Identify once per protected action. Each call is a billable identification, and the ingest
   allows about 15 requests per minute per visitor IP.
@@ -60,7 +60,7 @@ async function submitSignup(form: Record<string, string>, userHidFromYourServer:
 ## 3. Backend: read and apply the verdict
 
 \`\`\`ts
-import { ShieldLabs, evaluateIdentification } from '@shieldlabs/node';
+import { ShieldLabs, evaluateIdentification } from '@shieldlabs-ai/node';
 
 const shieldlabs = new ShieldLabs({ apiKey: process.env.SHIELDLABS_API_KEY! });
 
@@ -88,7 +88,7 @@ Server SDKs with the same model exist for Python (shieldlabs), Go, PHP, Java and
 ## 4. User HID
 
 \`\`\`ts
-import { userHid } from '@shieldlabs/node';
+import { userHid } from '@shieldlabs-ai/node';
 // hidSecret: a long random value created once and kept on your server (changing it changes every User HID).
 const hid = userHid(user.id, hidSecret); // HMAC-SHA256, 64 lowercase hex characters
 \`\`\`
@@ -100,7 +100,7 @@ userHid() is always searchable.
 ## 5. Webhooks (optional)
 
 \`\`\`ts
-import { webhooks } from '@shieldlabs/node';
+import { webhooks } from '@shieldlabs-ai/node';
 
 // One secret, or several separated by commas while you rotate: any of them verifies.
 const secrets = process.env.SHIELDLABS_WEBHOOK_SECRET!.split(',').map((secret) => secret.trim());

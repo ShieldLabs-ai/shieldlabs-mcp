@@ -1,4 +1,4 @@
-import type { FetchLike, FetchResponseLike } from '@shieldlabs/node';
+import type { FetchLike, FetchResponseLike } from '@shieldlabs-ai/node';
 
 /** How many History API requests this process sends. Every tool call and client shares it. */
 export interface HistoryBudget {

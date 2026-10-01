@@ -4,7 +4,7 @@ import {
   WebhookParseError,
   type WebhookEvent,
   type WebhookSecret,
-} from '@shieldlabs/node';
+} from '@shieldlabs-ai/node';
 import { z } from 'zod';
 import { bandOf } from '../catalog/bands.js';
 import { splitSecrets } from '../config.js';

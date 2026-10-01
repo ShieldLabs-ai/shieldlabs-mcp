@@ -1,4 +1,4 @@
-import type { FetchLike, FetchRequestInit, FetchResponseLike } from '@shieldlabs/node';
+import type { FetchLike, FetchRequestInit, FetchResponseLike } from '@shieldlabs-ai/node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildServerConfig } from '../src/config.js';
 import { TOOL_NAMES } from '../src/constants.js';

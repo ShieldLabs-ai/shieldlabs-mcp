@@ -1,4 +1,4 @@
-import type { FetchLike, FetchRequestInit } from '@shieldlabs/node';
+import type { FetchLike, FetchRequestInit } from '@shieldlabs-ai/node';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TOOL_NAMES } from '../src/constants.js';

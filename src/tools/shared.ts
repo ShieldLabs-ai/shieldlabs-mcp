@@ -1,5 +1,5 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { ShieldLabs } from '@shieldlabs/node';
+import type { ShieldLabs } from '@shieldlabs-ai/node';
 import { z } from 'zod';
 import { UUID_PATTERN } from '../constants.js';
 import { redact, type ServerContext } from '../context.js';

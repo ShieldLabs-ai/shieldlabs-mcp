@@ -9,7 +9,7 @@ import {
   TimeoutError,
   ValidationError,
   ApiError,
-} from '@shieldlabs/node';
+} from '@shieldlabs-ai/node';
 import { APP_URL, SUPPORT_EMAIL } from './constants.js';
 import { redact, type ServerContext } from './context.js';
 

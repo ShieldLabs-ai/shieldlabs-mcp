@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { FetchLike, FetchRequestInit } from '@shieldlabs/node';
+import type { FetchLike, FetchRequestInit } from '@shieldlabs-ai/node';
 import { vi } from 'vitest';
 import {
   createMockApi,

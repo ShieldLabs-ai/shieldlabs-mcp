@@ -6,7 +6,7 @@ server between several clients on the same machine:
 ```bash
 export SHIELDLABS_API_KEY=sec_your_private_key
 export SHIELDLABS_MCP_TOKEN="$(openssl rand -hex 32)"
-npx -y @shieldlabs/mcp --transport http --port 8787
+npx -y @shieldlabs-ai/mcp --transport http --port 8787
 ```
 
 - The endpoint is `http://127.0.0.1:8787/mcp`. Every request needs

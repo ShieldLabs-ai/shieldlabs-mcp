@@ -11,7 +11,7 @@
     "shieldlabs": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@shieldlabs/mcp"],
+      "args": ["-y", "@shieldlabs-ai/mcp"],
       "env": {
         "SHIELDLABS_API_KEY": "${input:shieldlabs-api-key}"
       }

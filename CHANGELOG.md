@@ -10,8 +10,8 @@ First release.
 
 ### Added
 
-- MCP server `@shieldlabs/mcp` (bin `shieldlabs-mcp`) built on the MCP TypeScript SDK and
-  `@shieldlabs/node`, which is bundled into the package.
+- MCP server `@shieldlabs-ai/mcp` (bin `shieldlabs-mcp`) built on the MCP TypeScript SDK and
+  `@shieldlabs-ai/node`, which is bundled into the package.
 - Tools, all read-only: `shieldlabs_get_identification` (waits up to about 10 seconds in total
   for the verdict of a new identification and returns the first stored version, which can still
   be refined for up to about 10 seconds after the browser call; a 429, a 5xx or a network error

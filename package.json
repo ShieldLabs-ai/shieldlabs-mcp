@@ -1,5 +1,5 @@
 {
-  "name": "@shieldlabs/mcp",
+  "name": "@shieldlabs-ai/mcp",
   "version": "1.0.0",
   "description": "ShieldLabs MCP server: read identifications, search history, summarize users, devices and IPs, explain Risk Scores and verify webhook signatures from any MCP client.",
   "license": "MIT",

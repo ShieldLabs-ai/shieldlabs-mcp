@@ -1,5 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { ShieldLabs } from '@shieldlabs/node';
+import type { ShieldLabs } from '@shieldlabs-ai/node';
 import { z } from 'zod';
 import { ENTITY_TYPES, TOOL_NAMES } from '../constants.js';
 import type { ServerContext } from '../context.js';

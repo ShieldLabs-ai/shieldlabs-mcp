@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { NIL_UUID } from '@shieldlabs/node';
+import { NIL_UUID } from '@shieldlabs-ai/node';
 import { TOOL_NAMES } from '../src/constants.js';
 import { summarize } from '../src/summarize.js';
 import { toIdentificationOutput } from '../src/identification.js';

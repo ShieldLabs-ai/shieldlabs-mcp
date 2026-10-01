@@ -1,10 +1,10 @@
-# @shieldlabs/mcp
+# @shieldlabs-ai/mcp
 
 MCP server that lets AI assistants read ShieldLabs identifications, search their history, explain Risk Scores and verify webhook signatures.
 
 [![CI](https://github.com/ShieldLabs-ai/shieldlabs-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ShieldLabs-ai/shieldlabs-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![npm](https://img.shields.io/npm/v/@shieldlabs/mcp.svg)](https://www.npmjs.com/package/@shieldlabs/mcp)
+[![npm](https://img.shields.io/npm/v/@shieldlabs-ai/mcp.svg)](https://www.npmjs.com/package/@shieldlabs-ai/mcp)
 
 ## How it fits
 
@@ -23,7 +23,7 @@ Start free at [app.shieldlabs.ai](https://app.shieldlabs.ai).
 ## Install
 
 ```bash
-npx -y @shieldlabs/mcp
+npx -y @shieldlabs-ai/mcp
 ```
 
 Node.js 20 or later. The server speaks stdio by default; MCP clients start it for you (see Quick
@@ -38,7 +38,7 @@ start). A container image is published as `ghcr.io/shieldlabs-ai/shieldlabs-mcp`
    **Claude Code**
 
    ```bash
-   claude mcp add --transport stdio shieldlabs --env SHIELDLABS_API_KEY=sec_your_private_key -- npx -y @shieldlabs/mcp
+   claude mcp add --transport stdio shieldlabs --env SHIELDLABS_API_KEY=sec_your_private_key -- npx -y @shieldlabs-ai/mcp
    ```
 
    **Claude Desktop** (`claude_desktop_config.json`), **Cursor** (`.cursor/mcp.json`) and other
@@ -49,7 +49,7 @@ start). A container image is published as `ghcr.io/shieldlabs-ai/shieldlabs-mcp`
      "mcpServers": {
        "shieldlabs": {
          "command": "npx",
-         "args": ["-y", "@shieldlabs/mcp"],
+         "args": ["-y", "@shieldlabs-ai/mcp"],
          "env": { "SHIELDLABS_API_KEY": "sec_your_private_key" }
        }
      }
@@ -67,7 +67,7 @@ start). A container image is published as `ghcr.io/shieldlabs-ai/shieldlabs-mcp`
        "shieldlabs": {
          "type": "stdio",
          "command": "npx",
-         "args": ["-y", "@shieldlabs/mcp"],
+         "args": ["-y", "@shieldlabs-ai/mcp"],
          "env": { "SHIELDLABS_API_KEY": "${input:shieldlabs-api-key}" }
        }
      }
@@ -160,7 +160,7 @@ guide when that fails, with `--offline`, and always over HTTP.
 
 ```bash
 SHIELDLABS_API_KEY=sec_your_private_key SHIELDLABS_MCP_TOKEN=your_long_random_token \
-  npx -y @shieldlabs/mcp --transport http --port 8787
+  npx -y @shieldlabs-ai/mcp --transport http --port 8787
 ```
 
 The endpoint is `http://127.0.0.1:8787/mcp` (streamable HTTP, stateless, JSON responses). Every
@@ -174,7 +174,7 @@ See [`examples/http`](examples/http).
 `--tools` exposes only the tools you list, with or without the `shieldlabs_` prefix:
 
 ```bash
-npx -y @shieldlabs/mcp --tools get_identification,explain_risk_score
+npx -y @shieldlabs-ai/mcp --tools get_identification,explain_risk_score
 ```
 
 The identification resource follows `shieldlabs_get_identification`, and the prompts only mention
@@ -292,7 +292,7 @@ details are internal text, so this server returns the signal slug and weight, as
 ## Errors and retries
 
 Tool errors come back as MCP tool results with `isError: true` and a message that names the fix.
-API calls use the retries of `@shieldlabs/node`: connection errors, timeouts, 429 and 5xx are
+API calls use the retries of `@shieldlabs-ai/node`: connection errors, timeouts, 429 and 5xx are
 retried with backoff; 400, 401, 402, 403 and 404 are not, and a Management API 429 is never
 retried: after one, `shieldlabs_get_domain_profile` answers from memory until the 10-minute block
 ends. History API requests wait in the shared budget described under Security. Cancelling a tool
@@ -328,7 +328,7 @@ The wait for a new verdict (`shieldlabs_get_identification` with `wait: true`, a
 | "cannot be sent in an HTTP header" or "domain must be ASCII" at start | A key or the domain contains a line break, a space or a non-ASCII character. Copy the key again from the analytics dashboard; write an internationalized domain in its punycode form (`xn--...`) |
 | HTTP 401 on `/mcp` | Send `Authorization: Bearer <SHIELDLABS_MCP_TOKEN>` |
 | HTTP 403 on `/mcp` | The browser origin is not in `--allowed-origins`, or the request used a host name other than localhost |
-| Nothing happens on stdio | Logs go to stderr; stdout carries the protocol. Run `npx -y @shieldlabs/mcp --help` to check the install |
+| Nothing happens on stdio | Logs go to stderr; stdout carries the protocol. Run `npx -y @shieldlabs-ai/mcp --help` to check the install |
 
 ## Compatibility
 
@@ -343,9 +343,9 @@ The wait for a new verdict (`shieldlabs_get_identification` with `wait: true`, a
 
 ```bash
 npm ci
-# Until @shieldlabs/node is published, build its tarball in a checkout of shieldlabs-node:
+# Until @shieldlabs-ai/node is published, build its tarball in a checkout of shieldlabs-node:
 (cd ../shieldlabs-node && npm ci && npm pack)
-npm install --no-save ../shieldlabs-node/shieldlabs-node-1.0.0.tgz
+npm install --no-save ../shieldlabs-node/shieldlabs-ai-node-1.0.0.tgz
 npm run typecheck
 npm run lint
 npm test -- --coverage
@@ -354,7 +354,7 @@ node dist/index.js --help
 npm run smoke            # the built server over stdio against the fake History API
 ```
 
-`@shieldlabs/node` is bundled into `dist/` at build time, so the published package depends only on
+`@shieldlabs-ai/node` is bundled into `dist/` at build time, so the published package depends only on
 `@modelcontextprotocol/sdk` and `zod`.
 
 ### Fake History API

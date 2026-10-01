@@ -1,6 +1,6 @@
 import type { Readable, Writable } from 'node:stream';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { ShieldLabsError } from '@shieldlabs/node';
+import { ShieldLabsError } from '@shieldlabs-ai/node';
 import { buildServerConfig, HELP_TEXT, parseArgs, UsageError, type CliOptions } from './config.js';
 import { SERVER_VERSION, TOOL_NAMES } from './constants.js';
 import { createContext, redact, type ContextDependencies, type ServerContext } from './context.js';

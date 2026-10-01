@@ -7,8 +7,8 @@ write to [contact@shieldlabs.ai](mailto:contact@shieldlabs.ai).
 
 ```bash
 npm ci
-(cd ../shieldlabs-node && npm ci && npm pack)   # until @shieldlabs/node is published
-npm install --no-save ../shieldlabs-node/shieldlabs-node-1.0.0.tgz
+(cd ../shieldlabs-node && npm ci && npm pack)   # until @shieldlabs-ai/node is published
+npm install --no-save ../shieldlabs-node/shieldlabs-ai-node-1.0.0.tgz
 ```
 
 ## Before you open a pull request
@@ -42,7 +42,7 @@ The CI workflow runs the same commands on Node.js 20, 22 and 24, plus the stdio 
 
 ## Releases
 
-`@shieldlabs/node` is bundled into `dist/`. Until it is published on npm, the workflows build it
+`@shieldlabs-ai/node` is bundled into `dist/`. Until it is published on npm, the workflows build it
 from its repository: CI from the `main` branch and the release workflow from the `v1.0.0` tag
 (`SHIELDLABS_NODE_REF` in each workflow), and both stop unless it is a 1.x version. So merge and
 tag the 1.x SDK before this package. While that repository is private, add a read-only token as

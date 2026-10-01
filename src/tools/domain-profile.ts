@@ -1,5 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { RateLimitError, type DomainProfile, type ShieldLabsManagement } from '@shieldlabs/node';
+import { RateLimitError, type DomainProfile, type ShieldLabsManagement } from '@shieldlabs-ai/node';
 import { z } from 'zod';
 import { PROFILE_CACHE_MS, TOOL_NAMES } from '../constants.js';
 import type { ServerContext, SharedRequest } from '../context.js';

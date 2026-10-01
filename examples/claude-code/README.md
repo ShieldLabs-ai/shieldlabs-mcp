@@ -3,7 +3,7 @@
 Add the server for your user, so it is available in every project:
 
 ```bash
-claude mcp add --transport stdio --scope user shieldlabs --env SHIELDLABS_API_KEY=sec_your_private_key -- npx -y @shieldlabs/mcp
+claude mcp add --transport stdio --scope user shieldlabs --env SHIELDLABS_API_KEY=sec_your_private_key -- npx -y @shieldlabs-ai/mcp
 ```
 
 Without `--scope user` the command adds it for the current project only (local scope).

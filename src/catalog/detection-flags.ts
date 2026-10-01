@@ -1,4 +1,4 @@
-import type { DetectionFlags } from '@shieldlabs/node';
+import type { DetectionFlags } from '@shieldlabs-ai/node';
 
 export type DetectionFlagKey = keyof DetectionFlags;
 

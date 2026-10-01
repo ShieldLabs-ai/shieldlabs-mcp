@@ -5,7 +5,7 @@ import {
   ValidationError,
   type DomainProfile,
   type FetchLike,
-} from '@shieldlabs/node';
+} from '@shieldlabs-ai/node';
 import { splitSecrets, type ServerConfig } from './config.js';
 import {
   HISTORY_TOOL_NAMES,
@@ -42,7 +42,7 @@ export interface ContextDependencies {
   guideFetch?: GuideFetch;
   /** Clock in epoch milliseconds. */
   now?: () => number;
-  /** Retries of the API clients (default 2, as in @shieldlabs/node). */
+  /** Retries of the API clients (default 2, as in @shieldlabs-ai/node). */
   maxRetries?: number;
   /** How long shieldlabs_get_identification polls for a verdict. Default 10 000 ms. */
   waitTimeoutMs?: number;

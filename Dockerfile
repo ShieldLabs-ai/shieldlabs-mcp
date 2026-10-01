@@ -1,6 +1,6 @@
 # ShieldLabs MCP server image: stdio by default, streamable HTTP with --transport http.
 #
-# Build dist/ first (npm run build). The bundle already contains @shieldlabs/node, so the image
+# Build dist/ first (npm run build). The bundle already contains @shieldlabs-ai/node, so the image
 # installs only the runtime dependencies of this package.
 #
 #   docker build -t ghcr.io/shieldlabs-ai/shieldlabs-mcp:1.0.0 .

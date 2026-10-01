@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  # @shieldlabs/node is bundled into dist/ at build time. Until it is published on npm, CI builds
+  # @shieldlabs-ai/node is bundled into dist/ at build time. Until it is published on npm, CI builds
   # it from this ref of its repository, which must hold a 1.x release of the SDK.
   SHIELDLABS_NODE_REF: main
 
@@ -41,24 +41,24 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
 
-      - name: Build and pack @shieldlabs/node
+      - name: Build and pack @shieldlabs-ai/node
         working-directory: .deps/shieldlabs-node
         run: |
           version="$(node -p "require('./package.json').version")"
           case "$version" in
             1.*) ;;
             *)
-              echo "::error::@shieldlabs/node at $SHIELDLABS_NODE_REF is version $version; this server needs 1.x."
+              echo "::error::@shieldlabs-ai/node at $SHIELDLABS_NODE_REF is version $version; this server needs 1.x."
               exit 1
               ;;
           esac
           npm ci
           npm pack --pack-destination ..
-          echo "SHIELDLABS_NODE_TGZ=.deps/shieldlabs-node-$version.tgz" >> "$GITHUB_ENV"
+          echo "SHIELDLABS_NODE_TGZ=.deps/shieldlabs-ai-node-$version.tgz" >> "$GITHUB_ENV"
 
       - run: npm ci
 
-      - name: Install @shieldlabs/node from the tarball
+      - name: Install @shieldlabs-ai/node from the tarball
         run: npm install --no-save "$SHIELDLABS_NODE_TGZ"
 
       - run: npm run typecheck

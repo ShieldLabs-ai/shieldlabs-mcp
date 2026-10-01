@@ -9,7 +9,7 @@ import {
   ShieldLabsError,
   TimeoutError,
   ValidationError,
-} from '@shieldlabs/node';
+} from '@shieldlabs-ai/node';
 import { describe, expect, it } from 'vitest';
 import {
   buildServerConfig,

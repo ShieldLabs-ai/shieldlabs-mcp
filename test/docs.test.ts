@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SIGNALS } from '@shieldlabs/node';
+import { SIGNALS } from '@shieldlabs-ai/node';
 import { describe, expect, it } from 'vitest';
 import { DETECTION_FLAG_KEYS } from '../src/catalog/detection-flags.js';
 import { RISK_SIGNAL_CATALOG } from '../src/catalog/risk-signals.js';
@@ -38,7 +38,7 @@ function expectHouseStyle(label: string, text: string): void {
 
 describe('package metadata', () => {
   it('keeps versions, names and entry points consistent', () => {
-    expect(pkg.name).toBe('@shieldlabs/mcp');
+    expect(pkg.name).toBe('@shieldlabs-ai/mcp');
     expect(pkg.version).toBe(SERVER_VERSION);
     expect(pkg.bin).toEqual({ 'shieldlabs-mcp': 'dist/index.js' });
     // A command, not a library: importing the package must not start a server.
@@ -63,7 +63,7 @@ describe('package metadata', () => {
     expect(server.version).toBe(SERVER_VERSION);
     expect(server.description.length).toBeLessThanOrEqual(100);
     expect(server.packages.map((p: any) => [p.registryType, p.identifier])).toEqual([
-      ['npm', '@shieldlabs/mcp'],
+      ['npm', '@shieldlabs-ai/mcp'],
       ['oci', `ghcr.io/shieldlabs-ai/shieldlabs-mcp:${SERVER_VERSION}`],
     ]);
     expect(server.packages[0].version).toBe(SERVER_VERSION);

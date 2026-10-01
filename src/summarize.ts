@@ -1,4 +1,4 @@
-import { NIL_UUID, type RiskBand } from '@shieldlabs/node';
+import { NIL_UUID, type RiskBand } from '@shieldlabs-ai/node';
 import { z } from 'zod';
 import { bandOf, worseBand } from './catalog/bands.js';
 import { DETECTION_FLAG_KEYS } from './catalog/detection-flags.js';
