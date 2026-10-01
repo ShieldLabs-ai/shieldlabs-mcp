@@ -1,0 +1,9 @@
+# User config: copy this block into ~/.grok/config.toml.
+# Project config: copy it into .grok/config.toml and keep the key in the environment
+# (${SHIELDLABS_API_KEY} is expanded when Grok loads the file).
+
+[mcp_servers.shieldlabs]
+command = "npx"
+args = ["-y", "@shieldlabs-ai/mcp"]
+env = { SHIELDLABS_API_KEY = "${SHIELDLABS_API_KEY}" }
+startup_timeout_sec = 60
