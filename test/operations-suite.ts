@@ -112,6 +112,86 @@ async function connect(host: ReturnType<Host>, token = HOSTED_TOKEN) {
 /** Same actual MCP Client suite runs through Node handler and the Worker entry in workerd. */
 export function operationsSuite(host: Host) {
   describe('hosted operations contract', () => {
+    it('matches webhook name code-point and URL UTF-8 byte boundaries on create and patch', async () => {
+      const backend = operationsBackend();
+      const client = await connect(host(backend));
+      try {
+        const tools = (await client.listTools()).tools;
+        const prefix = 'https://example.com/';
+        const url512 = prefix + 'a'.repeat(512 - prefix.length);
+        const utf8Url512 = prefix + '\u00e9'.repeat((512 - prefix.length) / 2);
+        expect(new TextEncoder().encode(utf8Url512)).toHaveLength(512);
+        for (const toolName of ['shieldlabs_create_webhook', 'shieldlabs_patch_webhook']) {
+          const properties = tools.find((tool) => tool.name === toolName)!.inputSchema.properties!;
+          expect(properties.name).toMatchObject({ maxLength: 80 });
+          expect(properties.url).toMatchObject({ maxLength: 512 });
+          expect(JSON.stringify(properties.url)).toContain('512 UTF-8 bytes');
+          const base = {
+            domain_id: DOMAIN_ID,
+            ...(toolName.endsWith('patch_webhook') ? { webhook_id: HOOK_ID, confirm: true } : {}),
+          };
+          for (const [name, url, accepted] of [
+            ['a'.repeat(80), url512, true],
+            ['a'.repeat(81), url512, false],
+            ['\u{1f600}'.repeat(80), utf8Url512, true],
+            ['\u{1f600}'.repeat(81), utf8Url512, false],
+            ['Valid', url512 + 'a', false],
+            ['Valid', utf8Url512 + 'a', false],
+            ['\u0085' + '\u{1f600}'.repeat(80) + '\u0085', ' ' + utf8Url512 + ' ', true],
+          ] as const) {
+            const before = backend.calls.length;
+            const reply = await client.callTool({
+              name: toolName,
+              arguments: { ...base, name, url },
+            });
+            expect(reply.isError === true, `${toolName}: accepted=${accepted}`).toBe(!accepted);
+            expect(backend.calls).toHaveLength(before + (accepted ? 1 : 0));
+            if (accepted) {
+              const body = JSON.parse(backend.calls.at(-1)!.body);
+              expect([...body.name].length).toBeLessThanOrEqual(80);
+              expect(new TextEncoder().encode(body.url).byteLength).toBeLessThanOrEqual(512);
+              expect(body.name).not.toContain('\u0085');
+            }
+          }
+        }
+      } finally {
+        await client.close();
+      }
+    });
+
+    it('accepts only IPv4-convertible history IPs and refuses pure IPv6 before forwarding', async () => {
+      const backend = operationsBackend();
+      const client = await connect(host(backend));
+      try {
+        const tools = (await client.listTools()).tools;
+        for (const name of ['shieldlabs_search_history', 'shieldlabs_summarize_entity']) {
+          expect(JSON.stringify(tools.find((tool) => tool.name === name)!.inputSchema)).toContain(
+            'pure IPv6 is not searchable',
+          );
+          for (const value of ['2001:db8::1', '::1', '::203.0.113.24', 'not-an-ip', '256.0.0.1']) {
+            const before = backend.calls.length;
+            const reply = await client.callTool({ name, arguments: { type: 'ip', value } });
+            expect(reply.isError).toBe(true);
+            expect(JSON.stringify(reply)).toContain('IPv4 or IPv4-mapped IPv6 only');
+            expect(JSON.stringify(reply)).not.toContain('502');
+            expect(backend.calls).toHaveLength(before);
+          }
+          for (const value of [
+            '203.0.113.24',
+            '::ffff:203.0.113.24',
+            '::ffff:cb00:7118',
+            '0:0:0:0:0:ffff:cb00:7118',
+          ]) {
+            const reply = await client.callTool({ name, arguments: { type: 'ip', value } });
+            expect(reply.isError).not.toBe(true);
+            expect(backend.calls.at(-1)!.path).toContain('/ip/203.0.113.24?');
+          }
+        }
+      } finally {
+        await client.close();
+      }
+    });
+
     it('retries transient reads within the polling budget with fresh signatures', async () => {
       const backend = operationsBackend();
       const client = await connect(host(backend));

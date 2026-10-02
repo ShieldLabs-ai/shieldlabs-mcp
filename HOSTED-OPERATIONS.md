@@ -23,8 +23,8 @@ path or embedded credentials. `format` is `"markdown" | "json"`, default
 | `shieldlabs_rotate_server_key` | `{domain_id: UUID, confirm: true, include_secret?: boolean = false}` |
 | `shieldlabs_list_webhooks` | `{domain_id: UUID}` |
 | `shieldlabs_get_webhook` | `{domain_id: UUID, webhook_id: UUID}` |
-| `shieldlabs_create_webhook` | `{domain_id: UUID, name: string[1..100], url: HTTPS_URL[1..2048], include_secret?: boolean = false}` |
-| `shieldlabs_patch_webhook` | `{domain_id: UUID, webhook_id: UUID, name?: string[1..100], url?: HTTPS_URL[1..2048], confirm?: true}`; at least one patch field; URL requires `confirm:true` |
+| `shieldlabs_create_webhook` | `{domain_id: UUID, name: string[1..80 Unicode characters], url: HTTPS_URL[1..512 UTF-8 bytes], include_secret?: boolean = false}` |
+| `shieldlabs_patch_webhook` | `{domain_id: UUID, webhook_id: UUID, name?: string[1..80 Unicode characters], url?: HTTPS_URL[1..512 UTF-8 bytes], confirm?: true}`; at least one patch field; URL requires `confirm:true` |
 | `shieldlabs_delete_webhook` | `{domain_id: UUID, webhook_id: UUID, confirm: true}` |
 | `shieldlabs_enable_webhook` | `{domain_id: UUID, webhook_id: UUID}` |
 | `shieldlabs_disable_webhook` | `{domain_id: UUID, webhook_id: UUID, confirm: true}` |
@@ -40,7 +40,10 @@ path or embedded credentials. `format` is `"markdown" | "json"`, default
 "session_id" | "cookie_id"`. `Entity = "user_hid" | "device_id" | "visitor_id" |
 "ip" | "cookie_id"`. Identifier values are encoded once. Slash, backslash, control
 characters and dot segments are rejected; ID types require UUIDs. IP validity is
-checked by the backend, which supports IPv4 and IPv6.
+checked locally and by the backend: only IPv4 and IPv4-mapped IPv6 are searchable.
+Mapped addresses are normalized to dotted IPv4. Pure IPv6 is refused locally with
+an actionable `invalid_request` error. Webhook names and URLs are trimmed before
+validation: names count Unicode code points, URLs count UTF-8 bytes.
 
 History domain selection is delegated to the backend for each read. Omission is
 accepted only with exactly one enabled owned domain; otherwise an actionable

@@ -87,15 +87,32 @@ const IncludeSecret = z
   .describe(
     'Only an installer should opt in to receive a one-time raw credential. Clients may record it; store privately and never log it',
   );
-const Name = z.string().trim().min(1).max(100);
+// Match Go strings.TrimSpace and utf8.RuneCountInString, not UTF-16 code units.
+const trimWebhookText = (value: string): string =>
+  value.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, '');
+const Name = z
+  .string()
+  .overwrite(trimWebhookText)
+  .min(1)
+  .refine((value) => [...value].length <= 80, 'Name must be at most 80 Unicode characters')
+  .meta({ maxLength: 80 })
+  .describe('Webhook name: 1 to 80 Unicode characters after trimming whitespace');
 const HookUrl = z
   .string()
+  .overwrite(trimWebhookText)
   .url()
-  .max(2048)
+  .max(512)
+  .refine(
+    (value) => new TextEncoder().encode(value).byteLength <= 512,
+    'Webhook URL must be at most 512 UTF-8 bytes after trimming whitespace',
+  )
   .refine((value) => {
     const url = new URL(value);
     return url.protocol === 'https:' && url.username === '' && url.password === '';
-  }, 'A public HTTPS URL without embedded credentials is required');
+  }, 'A public HTTPS URL without embedded credentials is required')
+  .describe(
+    'Public HTTPS URL without credentials: at most 512 UTF-8 bytes after trimming whitespace',
+  );
 const domainFields = { domain_id: DomainId };
 const hookFields = { ...domainFields, webhook_id: WebhookId };
 const secretMetadata = {
@@ -422,6 +439,21 @@ function lookupValue(type: string, value: string): string {
   if (type !== 'user_hid' && type !== 'ip' && !UUID_PATTERN.test(value)) {
     throw new OperationError('invalid_request', 'This identifier must be a UUID.');
   }
+  if (type === 'ip' && !z.ipv4().safeParse(value).success) {
+    // WHATWG URL canonicalizes valid mapped IPv6, including dotted and expanded forms.
+    const mapped = z.ipv6().safeParse(value).success
+      ? new URL(`https://[${value}]/`).hostname.match(/^\[::ffff:([0-9a-f]+):([0-9a-f]+)\]$/i)
+      : null;
+    if (!mapped) {
+      throw new OperationError(
+        'invalid_request',
+        'History supports IPv4 or IPv4-mapped IPv6 only. Pure IPv6 is not searchable; use a dotted IPv4 address or another identifier such as request_id or user_hid.',
+      );
+    }
+    const high = Number.parseInt(mapped[1]!, 16);
+    const low = Number.parseInt(mapped[2]!, 16);
+    value = `${high >>> 8}.${high & 255}.${low >>> 8}.${low & 255}`;
+  }
   return type === 'user_hid' || type === 'ip' ? value : value.toLowerCase();
 }
 
@@ -430,7 +462,7 @@ const Value = z
   .min(1)
   .max(512)
   .describe(
-    'Exact identifier value, encoded once by this server; UUID for ID types, IPv4/IPv6 for ip, User HID text for user_hid',
+    'Exact identifier value, encoded once by this server; UUID for ID types, IPv4 or IPv4-mapped IPv6 for ip (pure IPv6 is not searchable), User HID text for user_hid',
   );
 const historyFields = { domain: Domain, response_format: ResponseFormatSchema };
 
