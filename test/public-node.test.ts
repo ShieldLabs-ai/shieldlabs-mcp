@@ -1,11 +1,13 @@
 import { PassThrough } from 'node:stream';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { main, type MainResult, type Started } from '../src/cli.js';
 import { parseArgs } from '../src/config.js';
 import { SERVER_VERSION } from '../src/constants.js';
 import { CHECK_CONNECTION_TOOL } from '../src/public/server.js';
+import { startPublicHttpServer } from '../src/public/node.js';
 import {
   bearer,
   CHALLENGE,
@@ -15,6 +17,8 @@ import {
   PORTAL_URL,
   PUBLIC_ORIGIN,
   TOKEN,
+  PUBLIC_CONFIG,
+  toolCall,
 } from './public-helpers.js';
 
 const ENV = {
@@ -68,6 +72,63 @@ function post(url: string, body: string, headers: Record<string, string> = {}) {
 }
 
 describe('--mode public on Node.js', () => {
+  it('aborts the signed backend operation when the HTTP client disconnects', async () => {
+    const portal = fakePortal({ now: Date.now });
+    let upstreamSignal: AbortSignal | undefined;
+    let startedOperation: () => void = () => {};
+    const begun = new Promise<void>((resolve) => {
+      startedOperation = resolve;
+    });
+    const server = await startPublicHttpServer({
+      host: '127.0.0.1',
+      port: 0,
+      config: PUBLIC_CONFIG,
+      log: () => {},
+      requestLog: () => {},
+      deps: {
+        fetch: (url, init) => {
+          if (url.endsWith('/mcp/v1/ping')) return portal.fetch(url, init);
+          upstreamSignal = init.signal;
+          startedOperation();
+          return new Promise(() => {});
+        },
+      },
+    });
+    const controller = new AbortController();
+    const client = new Client({ name: 'disconnect-test', version: '1' });
+    try {
+      await client.connect(
+        new StreamableHTTPClientTransport(new URL(server.url), {
+          requestInit: { headers: bearer(TOKEN) },
+        }) as Transport,
+      );
+      const request = fetch(server.url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json, text/event-stream',
+          'mcp-protocol-version': '2025-06-18',
+          ...bearer(TOKEN),
+        },
+        body: JSON.stringify(toolCall('shieldlabs_list_domains', {})),
+        signal: controller.signal,
+      }).catch(() => undefined);
+      await Promise.race([
+        begun,
+        request.then(() => {
+          throw new Error('Tool request ended before reaching the backend');
+        }),
+      ]);
+      controller.abort();
+      await request;
+      for (let i = 0; i < 50 && !upstreamSignal?.aborted; i++)
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(upstreamSignal?.aborted).toBe(true);
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
   it('serves health, the metadata and the challenge over HTTP', async () => {
     const { url, io, server } = await startPublic();
     expect(io.err()).toContain(
@@ -92,7 +153,8 @@ describe('--mode public on Node.js', () => {
     });
     await client.connect(transport as never);
     const { tools } = await client.listTools();
-    expect(tools.map((tool) => tool.name)).toEqual([CHECK_CONNECTION_TOOL]);
+    expect(tools.map((tool) => tool.name)).toContain(CHECK_CONNECTION_TOOL);
+    expect(tools).toHaveLength(21);
     const result = (await client.callTool({ name: CHECK_CONNECTION_TOOL, arguments: {} })) as any;
     expect(result.structuredContent.connected).toBe(true);
     await client.close();

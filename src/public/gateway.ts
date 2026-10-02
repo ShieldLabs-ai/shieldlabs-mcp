@@ -1,4 +1,4 @@
-import { base64Url, hmacSha256Base64Url } from './digest.js';
+import { base64Url, hmacSha256Base64Url, sha256Hex } from './digest.js';
 
 /**
  * Request header that proves a request to the MCP prefix of the ShieldLabs API comes from this
@@ -24,6 +24,8 @@ export interface GatewayRequest {
   unixSeconds: number;
   /** 16 to 64 base64url characters. The ShieldLabs API refuses a nonce it has seen before. */
   nonce: string;
+  /** Exact serialized body; present (including empty string) selects v2. */
+  body?: string;
 }
 
 /** Bytes of randomness in a nonce: 128 bits, 22 base64url characters. */
@@ -43,19 +45,21 @@ export function requestUriOf(url: string): string {
 }
 
 /**
- * The header value "v1 kid=<key ID> t=<time> n=<nonce> sig=<signature>". The signature is the
- * unpadded base64url HMAC-SHA256 of "v1", the time, the nonce, the method, the request URI and
- * the token hash, one per line.
+ * GET/HEAD retain the six-line v1 signature unless a body is explicitly supplied.
+ * Mutations use v2, appending SHA-256 of the exact body (empty for bodyless actions).
  */
 export async function gatewayHeader(key: GatewayKey, request: GatewayRequest): Promise<string> {
+  const version =
+    request.body === undefined && ['GET', 'HEAD'].includes(request.method) ? 'v1' : 'v2';
   const message = [
-    'v1',
+    version,
     String(request.unixSeconds),
     request.nonce,
     request.method,
     request.requestUri,
     request.tokenHash,
+    ...(version === 'v1' ? [] : [await sha256Hex(request.body ?? '')]),
   ].join('\n');
   const signature = await hmacSha256Base64Url(key.secret, message);
-  return `v1 kid=${key.kid} t=${request.unixSeconds} n=${request.nonce} sig=${signature}`;
+  return `${version} kid=${key.kid} t=${request.unixSeconds} n=${request.nonce} sig=${signature}`;
 }

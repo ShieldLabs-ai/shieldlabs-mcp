@@ -58,7 +58,7 @@ function peerAddress(req: IncomingMessage): string {
   return /^::ffff:\d+\.\d+\.\d+\.\d+$/i.test(address) ? address.slice(7) : address;
 }
 
-function toWebRequest(req: IncomingMessage, trustProxy: boolean): Request {
+function toWebRequest(req: IncomingMessage, trustProxy: boolean, signal: AbortSignal): Request {
   const headers = new Headers();
   for (const [name, value] of Object.entries(req.headers)) {
     for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) {
@@ -69,7 +69,7 @@ function toWebRequest(req: IncomingMessage, trustProxy: boolean): Request {
   // it counts only when a trusted proxy sets it; otherwise it is the TCP peer.
   if (!trustProxy) headers.set('cf-connecting-ip', peerAddress(req));
   const method = req.method ?? 'GET';
-  const init: RequestInit & { duplex?: 'half' } = { method, headers };
+  const init: RequestInit & { duplex?: 'half' } = { method, headers, signal };
   if (method !== 'GET' && method !== 'HEAD') {
     init.body = bodyStream(req);
     init.duplex = 'half';
@@ -111,12 +111,20 @@ export async function startPublicHttpServer(
   };
 
   const server = createServer((req, res) => {
-    handlePublicRequest(toWebRequest(req, options.trustProxy ?? false), options.config, deps)
+    const controller = new AbortController();
+    const abort = () => {
+      if (!res.writableEnded) controller.abort();
+    };
+    req.once('aborted', abort);
+    res.once('close', abort);
+    handlePublicRequest(
+      toWebRequest(req, options.trustProxy ?? false, controller.signal),
+      options.config,
+      deps,
+    )
       .then((response) => send(req, res, response))
-      .catch((error: unknown) => {
-        options.log(
-          `HTTP request failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
+      .catch(() => {
+        options.log('HTTP request failed.');
         if (res.headersSent) {
           res.end();
           return;
@@ -129,6 +137,10 @@ export async function startPublicHttpServer(
             id: null,
           }),
         );
+      })
+      .finally(() => {
+        req.off('aborted', abort);
+        res.off('close', abort);
       });
   });
 

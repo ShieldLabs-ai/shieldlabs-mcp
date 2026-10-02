@@ -285,7 +285,7 @@ describe('public mode: authentication', () => {
 });
 
 describe('public mode: MCP requests', () => {
-  it('offers shieldlabs_check_connection only, with no prompts or resources', async () => {
+  it('offers hosted operations, prompts and resources', async () => {
     const deps = publicDeps(fakePortal().fetch);
     const client = await connectClient(TOKEN, deps);
     expect(client.getServerVersion()).toMatchObject({
@@ -295,12 +295,12 @@ describe('public mode: MCP requests', () => {
     });
     const capabilities = client.getServerCapabilities()!;
     expect(capabilities.tools).toBeDefined();
-    expect(capabilities.prompts).toBeUndefined();
-    expect(capabilities.resources).toBeUndefined();
+    expect(capabilities.prompts).toBeDefined();
+    expect(capabilities.resources).toBeDefined();
     expect(client.getInstructions()).toContain(CHECK_CONNECTION_TOOL);
     expect(client.getInstructions()).not.toContain('SHIELDLABS_');
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(1);
+    expect(tools).toHaveLength(21);
     expect(tools[0]).toMatchObject({
       name: CHECK_CONNECTION_TOOL,
       inputSchema: { type: 'object', properties: {} },
@@ -322,7 +322,7 @@ describe('public mode: MCP requests', () => {
       checked_at: new Date(NOW).toISOString(),
     });
     expect(result.content[0].text).toContain('The connection to ShieldLabs works');
-    expect(result.content[0].text).toContain('later release');
+    expect(result.content[0].text).toContain('shieldlabs_list_domains');
     expect(portal.calls.length).toBe(pingsBefore + 1);
     await client.close();
 

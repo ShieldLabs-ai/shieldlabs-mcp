@@ -12,6 +12,8 @@ export const PING_TIMEOUT_MS = 3_000;
 /** The part of a fetch response a ping reads. */
 export interface PortalResponse {
   status: number;
+  headers?: { get(name: string): string | null };
+  body?: ReadableStream<Uint8Array> | null;
   text(): Promise<string>;
 }
 
@@ -19,7 +21,8 @@ export interface PortalResponse {
 export type PortalFetch = (
   url: string,
   init: {
-    method: 'GET';
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+    body?: string;
     headers: Record<string, string>;
     signal: AbortSignal;
     redirect: 'manual';

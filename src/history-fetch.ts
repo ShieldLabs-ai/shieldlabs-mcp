@@ -51,11 +51,14 @@ function retryAfterMs(value: string | null, nowMs: number): number | undefined {
  *
  * `clock` must advance with setTimeout (monotonic milliseconds).
  */
-export function budgetedHistoryFetch(
-  fetch: FetchLike,
+export function budgetedFetch<
+  I extends { signal: AbortSignal },
+  R extends Pick<FetchResponseLike, 'status' | 'headers'>,
+>(
+  fetch: (url: string, init: I) => Promise<R>,
   budget: HistoryBudget = DEFAULT_HISTORY_BUDGET,
   clock: () => number = () => performance.now(),
-): FetchLike {
+): (url: string, init: I) => Promise<R> {
   const spacing = 1000 / budget.perSecond;
   const queue: (() => void)[] = [];
   let inFlight = 0;
@@ -81,7 +84,7 @@ export function budgetedHistoryFetch(
     }
   };
 
-  const pauseAfterRateLimit = (response: FetchResponseLike): void => {
+  const pauseAfterRateLimit = (response: Pick<FetchResponseLike, 'status' | 'headers'>): void => {
     const asked = retryAfterMs(response.headers.get('retry-after'), Date.now());
     const pause = Math.min(
       MAX_RATE_LIMIT_PAUSE_MS,
@@ -91,7 +94,7 @@ export function budgetedHistoryFetch(
   };
 
   return (url, init) =>
-    new Promise<FetchResponseLike>((resolve, reject) => {
+    new Promise<R>((resolve, reject) => {
       const { signal } = init;
       if (signal.aborted) {
         reject(abortReason(signal));
@@ -118,10 +121,23 @@ export function budgetedHistoryFetch(
         const index = queue.indexOf(start);
         if (index === -1) return;
         queue.splice(index, 1);
+        if (queue.length === 0 && timer !== undefined) {
+          clearTimeout(timer);
+          timer = undefined;
+        }
         reject(abortReason(signal));
       };
       signal.addEventListener('abort', onAbort, { once: true });
       queue.push(start);
       pump();
     });
+}
+
+/** Original History SDK adapter, preserving local API-key mode and its budget semantics. */
+export function budgetedHistoryFetch(
+  fetch: FetchLike,
+  budget: HistoryBudget = DEFAULT_HISTORY_BUDGET,
+  clock: () => number = () => performance.now(),
+): FetchLike {
+  return budgetedFetch(fetch, budget, clock);
 }

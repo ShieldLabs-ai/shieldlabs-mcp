@@ -36,6 +36,7 @@ import {
   withHeaders,
 } from './responses.js';
 import { createPublicServer } from './server.js';
+import { OperationsClient } from './operations-client.js';
 import { bearerToken, isAccessToken, type TokenCache } from './token.js';
 
 export interface PublicDependencies {
@@ -210,6 +211,16 @@ async function serveMcp(
 
   const server = createPublicServer({
     now,
+    operations: new OperationsClient({
+      config,
+      fetch: deps.fetch ?? globalFetch,
+      token,
+      tokenHash,
+      now,
+      signal: request.signal,
+      onInvalidToken: () => deps.cache.forget(tokenHash),
+      ...(deps.nonce === undefined ? {} : { nonce: deps.nonce }),
+    }),
     ...(deps.jsonSchemaValidator === undefined
       ? {}
       : { jsonSchemaValidator: deps.jsonSchemaValidator }),

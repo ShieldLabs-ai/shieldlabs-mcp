@@ -161,9 +161,10 @@ describe('the Worker', () => {
       version: SERVER_VERSION,
     });
     const listed = await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
-    expect(listed.result.tools.map((tool: { name: string }) => tool.name)).toEqual([
+    expect(listed.result.tools.map((tool: { name: string }) => tool.name)).toContain(
       CHECK_CONNECTION_TOOL,
-    ]);
+    );
+    expect(listed.result.tools).toHaveLength(21);
     const checked = await rpc({
       jsonrpc: '2.0',
       id: 3,

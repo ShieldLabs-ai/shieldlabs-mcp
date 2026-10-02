@@ -78,7 +78,7 @@ const InputSchema = z
   })
   .strict();
 
-const OutputSchema = z.object({
+export const OutputSchema = z.object({
   lookup: z.object({ type: z.enum(LOOKUP_TYPES), value: z.string() }),
   total: z.number().int().describe('Identifications matching the lookup'),
   count: z.number().int().describe('Identifications in this response'),
