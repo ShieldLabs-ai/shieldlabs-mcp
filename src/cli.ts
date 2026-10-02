@@ -9,7 +9,6 @@ import { createLogger, type Logger } from './log.js';
 import { PublicConfigError, publicConfigFromEnv, type PublicConfig } from './public/config.js';
 import type { PublicDependencies } from './public/handler.js';
 import { startPublicHttpServer } from './public/node.js';
-import { CHECK_CONNECTION_TOOL } from './public/server.js';
 import { createShieldLabsServer } from './server.js';
 
 export interface MainOptions {
@@ -151,7 +150,7 @@ async function startPublic(
       : cli.allowedOrigins.length > 0
         ? '--allowed-origins does not apply to --mode public, which accepts browser clients on https origins and on http://localhost.'
         : cli.tools !== undefined
-          ? `--tools does not apply to --mode public, which offers ${CHECK_CONNECTION_TOOL} only.`
+          ? '--tools does not apply to --mode public. Hosted mode exposes its complete operation catalog; inspect it with MCP tools/list.'
           : undefined;
   if (refusal !== undefined) {
     log(`${refusal} Run shieldlabs-mcp --help for usage.`);

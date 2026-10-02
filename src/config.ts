@@ -240,7 +240,7 @@ Options:
   --host <address>           Bind address for --transport http (default: ${DEFAULT_HTTP_HOST})
   --allowed-origins <list>   Comma-separated browser origins allowed to call the HTTP
                              endpoint (default: none, requests with an Origin header are refused)
-  --tools <list>             Comma-separated allowlist of tools to expose, with or
+  --tools <list>             Local mode only: comma-separated allowlist of tools, with or
                              without the shieldlabs_ prefix (default: every available tool)
   --offline                  Never fetch remote content: the integrate_shieldlabs prompt
                              uses its built-in guide (always the case with --transport http)

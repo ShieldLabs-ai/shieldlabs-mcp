@@ -9,7 +9,8 @@ All notable changes to this package are documented here. The format follows
 ### Added
 
 - A Grok client example (`examples/grok`) for the same local server Claude Code starts, plus the
-  hosted URL for Grok. The hosted server still only offers `shieldlabs_check_connection`.
+  configured hosted URL for Grok. Current preview availability and deployed version must be
+  verified separately; these notes describe source functionality, not deployment.
 - Public mode, for the hosted multi-tenant server (`--transport http --mode public`, or the
   Cloudflare Worker entry `src/worker.ts`). Users connect by signing in with their ShieldLabs
   account (OAuth); a request without an access token gets a 401 with the `resource_metadata`
@@ -19,10 +20,24 @@ All notable changes to this package are documented here. The format follows
   API, signed with the `X-Shield-Gateway` header (key `MCP_GATEWAY_KEY`, a fresh nonce per
   request). An accepted token is remembered for 60 seconds under its SHA-256 hash; refusals are
   never remembered. Any other credential, API keys included, gets the 401 without being sent
-  anywhere: API keys are a later step.
-- In this release public mode offers one tool, `shieldlabs_check_connection`, and no prompts or
-  resources; the identification tools follow when the account API serves them to the hosted
-  server. Local and single-tenant HTTP modes are unchanged.
+  anywhere. Every operation still revalidates the live token and account ownership at the backend,
+  even when the ingress ping cache is hit.
+- Public mode implements 21 tools: connection check, domain list/get/create/patch/delete/server-key
+  rotation, ten webhook lifecycle operations, history search, identification read, entity summary
+  and risk explanation. Four static resources, a domain-scoped identification template and three
+  prompts are included. Exact names and schemas are in the packaged
+  [hosted operations reference](HOSTED-OPERATIONS.md). Local stdio/API-key and single-tenant HTTP
+  tools remain read-only; the local `--tools` allowlist is rejected in public mode.
+- Hosted writes require explicit `confirm:true` for deletes, disables, rotations and webhook URL
+  changes. Domain/webhook create and rotate mask credentials by default; only an installer should
+  opt into `include_secret:true`, then privately store the structured one-time sensitive result.
+  MCP clients can record that response in transcripts; this is not transcript prevention.
+- Hosted calls use only `/mcp/v1`. GET/ping retain v1 signatures; mutations use HMAC-SHA256 v2
+  binding the method, exact request URI, token hash and SHA-256 of the raw serialized body,
+  including empty bodies. Bodies are bounded to 1 MiB and mutations are never retried.
+- Webhook names accept at most 80 trimmed Unicode characters and URLs at most 512 trimmed UTF-8
+  bytes. Hosted history supports IPv4 and IPv4-mapped IPv6, not pure IPv6; unsupported addresses
+  are rejected locally with an actionable error.
 - CORS and Origin checks for browser clients, one JSON-RPC message per request, rate limits per
   token and per address (pings for tokens that are not in the cache are limited per address before
   the account API is asked), and one JSON log line per request without tokens, signatures or

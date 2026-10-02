@@ -208,7 +208,11 @@ describe('--mode public on Node.js', () => {
         ENV,
         '--allowed-origins does not apply',
       ],
-      [[...ARGS, '--tools', 'current_time'], ENV, '--tools does not apply to --mode public'],
+      [
+        [...ARGS, '--tools', 'current_time'],
+        ENV,
+        '--tools does not apply to --mode public. Hosted mode exposes its complete operation catalog; inspect it with MCP tools/list.',
+      ],
       [ARGS, {}, 'Configuration error. SHIELDLABS_PUBLIC_ORIGIN is not set'],
       [ARGS, { ...ENV, MCP_GATEWAY_KEY: '' }, 'Configuration error. MCP_GATEWAY_KEY is not set'],
       [

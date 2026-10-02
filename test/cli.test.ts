@@ -28,6 +28,10 @@ describe('main()', () => {
     expect(io.out()).toContain('Usage: shieldlabs-mcp [options]');
     expect(io.out()).toContain('SHIELDLABS_MCP_TOKEN');
     expect(io.out()).toContain('shieldlabs_get_identification');
+    expect(io.out()).toContain(
+      'Local tools are read-only. Hosted mode also manages domains and webhooks.',
+    );
+    expect(io.out()).toContain('Local mode only: comma-separated allowlist');
     const version = streams();
     expect(await main(['-v'], { env: {}, ...version })).toEqual({ exitCode: 0 });
     expect(version.out()).toBe('1.0.0\n');

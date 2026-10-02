@@ -1,6 +1,6 @@
 # @shieldlabs-ai/mcp
 
-MCP server that lets AI assistants read ShieldLabs identifications, search their history, explain Risk Scores and verify webhook signatures.
+MCP server for ShieldLabs identification and risk analysis, with domain and webhook management in hosted OAuth mode.
 
 [![CI](https://github.com/ShieldLabs-ai/shieldlabs-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ShieldLabs-ai/shieldlabs-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -17,7 +17,8 @@ MCP server that lets AI assistants read ShieldLabs identifications, search their
 
 This server puts steps 2 and 3 in reach of an MCP client such as Claude Desktop, Claude Code,
 Grok, Cursor or VS Code: ask "review request 02f1d973-..." or "which accounts used this device?" and the
-assistant reads the answers from the History API. Every tool is read-only. New to ShieldLabs?
+assistant reads the answers from the History API. Local stdio/API-key tools are read-only;
+hosted OAuth mode also exposes domain and webhook writes. New to ShieldLabs?
 Start free at [app.shieldlabs.ai](https://app.shieldlabs.ai).
 
 ## Install
@@ -93,15 +94,29 @@ More client setups, HTTP and Docker: [`examples/`](examples).
 
 ## Hosted server (preview)
 
-ShieldLabs also runs this server for you at `https://mcp.shieldlabs.ai/mcp` (streamable HTTP).
-There is nothing to install: add the URL to your MCP client and sign in with your ShieldLabs
-account when the client opens the sign-in page. The client then holds a short-lived access token
-(one hour) and refreshes it by itself.
+This source version implements a hosted multi-tenant server over streamable HTTP.
+The configured public endpoint is `https://mcp.shieldlabs.ai/mcp`; its current preview
+availability and deployed version are not verified here. Before relying on a deployment,
+verify sign-in, MCP discovery and `shieldlabs_check_connection` with your account.
+The client signs in with ShieldLabs OAuth and manages its access and refresh tokens.
+Hosted mode accepts only ShieldLabs access tokens, not API keys or cabinet credentials.
 
-In this release the hosted server connects your account and offers one tool,
-`shieldlabs_check_connection`, which confirms that the connection works. The tools that read
-identifications arrive on the hosted server in a later release; until then, use the local server
-above. Sign-in is the only way in for now: the hosted server does not accept API keys yet.
+The implemented hosted catalog has **21 tools**: connection check, six domain operations,
+ten webhook lifecycle operations, and four history/risk tools. It also has four static
+resources, a domain-scoped identification resource template and three prompts. Exact tool,
+resource and prompt names and input/output types are in the packaged
+[hosted operations reference](HOSTED-OPERATIONS.md). Inspect MCP `tools/list`,
+`resources/list`, `resources/templates/list` and `prompts/list` for the deployed catalog.
+Local stdio and single-tenant API-key HTTP mode remain read-only.
+
+Hosted deletes, disables and rotations require explicit `confirm:true`; changing a webhook
+URL or disabling a domain also requires confirmation. Create/rotate domain and webhook tools
+mask credentials unless `include_secret:true` is explicitly supplied. Only an installer
+should opt in: the structured result is marked `sensitive:true` and `one_time:true`.
+Store it privately without logging or repeating it. Clients can record this response in
+transcripts; one-time delivery is not cryptographic transcript prevention.
+
+The following client setup examples apply when the hosted deployment is available:
 
 **Claude**: Customize > Connectors > Add custom connector, with the URL
 `https://mcp.shieldlabs.ai/mcp`.
@@ -218,7 +233,7 @@ See [`examples/http`](examples/http).
 
 ### Limit the tools
 
-`--tools` exposes only the tools you list, with or without the `shieldlabs_` prefix:
+In local mode, `--tools` exposes only the tools you list, with or without the `shieldlabs_` prefix:
 
 ```bash
 npx -y @shieldlabs-ai/mcp --tools get_identification,explain_risk_score
@@ -226,10 +241,14 @@ npx -y @shieldlabs-ai/mcp --tools get_identification,explain_risk_score
 
 The identification resource follows `shieldlabs_get_identification`, and the prompts only mention
 tools that are exposed.
+Hosted public mode rejects `--tools`; it exposes the complete hosted operation catalog.
 
 ## Reference
 
-### Configuration
+### Local configuration
+
+These key-based settings apply to local mode. Hosted OAuth configuration is described under
+[Deploy the hosted server](#deploy-the-hosted-server).
 
 | Variable | Required | Purpose |
 |---|---|---|
@@ -248,12 +267,12 @@ tools that are exposed.
 | `--port <number>` | `8787` | HTTP port |
 | `--host <address>` | `127.0.0.1` | HTTP bind address |
 | `--allowed-origins <list>` | none | Browser origins allowed to call the HTTP endpoint; requests with any other `Origin` header are refused |
-| `--tools <list>` | all available | Allowlist of tools |
+| `--tools <list>` | all available | Local-mode tool allowlist; rejected in public mode |
 | `--offline` | off (on with `--transport http`) | Never fetch remote content (the setup prompt uses its built-in guide) |
 | `--trust-proxy` | off | With `--mode public`: take the client address of the per-address limits from `CF-Connecting-IP`, which the proxy in front must set (see [Container](#container)) |
 | `--help`, `--version` | | |
 
-### Tools
+### Local tools
 
 Every tool is annotated `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`,
 accepts `response_format` (`markdown` by default, or `json`) and returns structured content with an
@@ -280,7 +299,7 @@ Identifications follow the model of the ShieldLabs server SDKs (webhook field na
 raw payload, plus `risk_band`. `signals[].description` is always `null`: the History API's score
 details are internal text, so this server returns the signal slug and weight, as webhooks do.
 
-### Resources
+### Local resources
 
 | URI | Content |
 |---|---|
@@ -290,13 +309,18 @@ details are internal text, so this server returns the signal slug and weight, as
 | `shieldlabs://reference/risk-signals` | Catalog of risk signals, detection flags and connection types in plain language |
 | `shieldlabs://reference/risk-bands` | The three bands and the 999 rate-limit marker |
 
-### Prompts
+### Local prompts
 
 | Prompt | Arguments | Purpose |
 |---|---|---|
 | `integrate_shieldlabs` | none | Integration plan from the setup skill of the `shieldlabs-skills` release `v1.0.0` (fetched on stdio with a short timeout and cached for an hour; built-in guide offline and over HTTP) |
 | `investigate_user` | `user_hid` | Investigate one account: band, devices and other accounts on them, countries, flags, suggested action |
 | `review_request` | `request_id` | Review one identification: verdict, risk signals, freshness, device and account history, suggested action |
+
+Hosted mode shares the four static resources above, but uses
+`shieldlabs://domains/{domain}/identifications/{request_id}` for identification reads.
+Hosted `investigate_user` and `review_request` require an explicit `domain` argument;
+see [HOSTED-OPERATIONS.md](HOSTED-OPERATIONS.md) for their complete schemas.
 
 ### Reading the results
 
@@ -312,23 +336,29 @@ details are internal text, so this server returns the signal slug and weight, as
 
 ## Security
 
-- **Keys stay in the environment.** The server never logs keys or secrets and never returns them,
-  not even in error messages. Pass keys through the client's `env` settings, not command-line
-  flags.
-- **Read-only.** No tool changes anything in ShieldLabs. The Management API tool reads the profile
-  only.
+- **Local keys stay in the environment.** Local tools never return configured keys or secrets.
+  Pass them through the client's `env` settings, not command-line flags. Neither mode logs
+  credentials, tool arguments or results; errors never include raw credentials.
+- **Local read-only, hosted writes.** Local tools do not change ShieldLabs data; the local
+  Management API tool only reads the profile. Hosted mode can create, patch and delete domains
+  and webhooks, rotate credentials, enable/disable endpoints, verify them and send test deliveries.
+  Deletes, disables, rotations and disruptive URL changes require `confirm:true`.
+- **Hosted one-time credentials.** Domain/webhook creation and rotation mask `server_key`/`secret`
+  by default. Only an installer should request `include_secret:true`, then privately store the
+  structured result marked `sensitive:true` and `one_time:true`. The server does not persist it,
+  but MCP clients can retain it in transcripts; this is not transcript prevention.
 - **Visitor data is data.** User HIDs, landing URLs, referrers and UTM values in identifications
   come from visitors' browsers. Markdown output renders every API value as inert inline code,
   invisible and control characters are shown as visible escapes in every format, json responses
   carry an `untrusted_data_note`, and the server instructions tell the assistant to treat these
   strings as data, never as instructions.
-- **A shared History API budget.** The History API allows about 15 requests per second per domain,
+- **A shared local History API budget.** The History API allows about 15 requests per second per domain,
   shared with your own backend, which polls it for new verdicts. This server sends at most 2
   History API requests at a time and 5 per second for the whole process (every tool call and every
   HTTP client) and queues the rest; after a 429 every queued request waits 1 to 5 seconds
   (`Retry-After`).
 - **Encrypted API calls.** Base URL overrides must use https, except on loopback addresses.
-- **HTTP transport**: bearer token required on every request (constant-time comparison), requests
+- **Local HTTP transport**: bearer token required on every request (constant-time comparison), requests
   with an unlisted `Origin` refused, `Host` checked on loopback binds, 1 MB body limit, and a
   health endpoint without data. The default bind address is `127.0.0.1`. The server warns at start
   when `SHIELDLABS_MCP_TOKEN` has fewer than 32 characters (use `openssl rand -hex 32`).
@@ -340,20 +370,33 @@ details are internal text, so this server returns the signal slug and weight, as
 - **Hosted server** (`--mode public`): a 401 challenge before any JSON-RPC runs, and only ShieldLabs
   access tokens (`slat_...`) are accepted; any other credential is refused without being sent
   anywhere. The ShieldLabs API accepts such a token only on its MCP prefix and only with this
-  server's `X-Shield-Gateway` signature (HMAC-SHA256 over the time, a fresh nonce, the method, the
-  path and the token hash), so a token copied out of a client is useless elsewhere. One client
-  address can have at most 300 new tokens checked per minute. The only state shared between
-  requests is the list of tokens accepted in the last 60 seconds, keyed by their SHA-256.
+  server's `X-Shield-Gateway` signature. All hosted calls use `/mcp/v1`, never `/api/v1` or cabinet
+  endpoints. GET/ping retain v1 signatures. Mutations use HMAC-SHA256 v2 over newline-separated
+  `v2`, time, nonce, method, exact request URI, token hash and SHA-256 of the exact raw body
+  (including the empty body for action POSTs and DELETEs). Bodies are bounded to 1 MiB.
+  Accepted ingress pings may be cached for 60 seconds under the token's SHA-256, but every
+  operation revalidates the live token and account ownership at the backend even on a cache hit.
+  Credentials and account/domain data are request-local; there is no account-data cache.
+  One client address can have at most 300 new tokens checked per minute.
+- **Hosted request budgets.** Each authenticated MCP request allows two concurrent backend
+  requests, five starts per second and twelve operations. Attempts time out after ten seconds;
+  identification polling shares a ten-second total budget including HTTP and delays.
+  Cancellation aborts queued and active requests and polling delays. Mutations are never retried.
 
 ## Errors and retries
 
 Tool errors come back as MCP tool results with `isError: true` and a message that names the fix.
-API calls use the retries of `@shieldlabs-ai/node`: connection errors, timeouts, 429 and 5xx are
+Local API calls use the retries of `@shieldlabs-ai/node`: connection errors, timeouts, 429 and 5xx are
 retried with backoff; 400, 401, 402, 403 and 404 are not, and a Management API 429 is never
 retried: after one, `shieldlabs_get_domain_profile` answers from memory until the 10-minute block
 ends. History API requests wait in the shared budget described under Security. Cancelling a tool
 call in the client stops its API requests, including the wait for a new verdict and requests still
 in the queue.
+
+Hosted mutations are never retried. Hosted identification polling retries transient failures
+within its total ten-second budget; a `Retry-After` pause capped at ten seconds that cannot fit
+the remaining budget returns the rate limit immediately. The manual error message preserves the
+backend's advertised retry recommendation. See [HOSTED-OPERATIONS.md](HOSTED-OPERATIONS.md).
 
 The wait for a new verdict (`shieldlabs_get_identification` with `wait: true`, and
 `shieldlabs_explain_risk_score` with a `request_id`) works on one budget of about 10 seconds:
@@ -418,7 +461,8 @@ time, the nonce, the method, the path with its query and the lowercase hex SHA-2
 one per line. The account API accepts it for 60 seconds either way and refuses a nonce it has
 seen, so every request gets 16 fresh random bytes. A `200` lets the request through and is
 remembered for 60 seconds under the SHA-256 of the token; refusals are never remembered. The
-`shieldlabs_check_connection` tool always pings again.
+`shieldlabs_check_connection` always pings again, and every other operation independently
+revalidates the live token and account ownership through its signed backend request.
 
 | Variable | Default | Purpose |
 |---|---|---|

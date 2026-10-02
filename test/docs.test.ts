@@ -54,7 +54,14 @@ describe('package metadata', () => {
     expect(JSON.stringify(pkg)).not.toContain('file:');
     expect(pkg.mcpName).toBe('io.github.shieldlabs-ai/shieldlabs-mcp');
     expect(pkg.files).toEqual(
-      expect.arrayContaining(['dist', 'server.json', 'README.md', 'CHANGELOG.md', 'LICENSE']),
+      expect.arrayContaining([
+        'dist',
+        'server.json',
+        'README.md',
+        'HOSTED-OPERATIONS.md',
+        'CHANGELOG.md',
+        'LICENSE',
+      ]),
     );
   });
 
@@ -121,6 +128,25 @@ describe('package metadata', () => {
     ]) {
       expect(readme).toContain(`\`${variable}\``);
     }
+  });
+
+  it('distinguishes hosted writes from local reads and ships the operation schemas', () => {
+    const readme = read('README.md');
+    const reference = read('HOSTED-OPERATIONS.md');
+    expect(readme).toContain('[hosted operations reference](HOSTED-OPERATIONS.md)');
+    expect(readme).toContain('**21 tools**');
+    expect(readme).toContain('Local stdio and single-tenant API-key HTTP mode remain read-only');
+    for (const text of [readme, read('CHANGELOG.md')]) {
+      expect(text).toContain('include_secret:true');
+      expect(text).toContain('confirm:true');
+      expect(text).toContain('transcripts');
+      expect(text).toMatch(/every\s+operation/i);
+      expect(text).not.toMatch(/offers one tool|still only offers|Every tool is read-only/);
+    }
+    expect(reference).toContain('80 Unicode characters');
+    expect(reference).toContain('512 UTF-8 bytes');
+    expect(reference).toContain('Pure IPv6 is refused locally');
+    expect(reference).toContain('Source availability does not imply deployment');
   });
 });
 
