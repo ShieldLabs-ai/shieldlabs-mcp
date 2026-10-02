@@ -7,8 +7,6 @@ write to [contact@shieldlabs.ai](mailto:contact@shieldlabs.ai).
 
 ```bash
 npm ci
-(cd ../shieldlabs-node && npm ci && npm pack)   # until @shieldlabs-ai/node is published
-npm install --no-save ../shieldlabs-node/shieldlabs-ai-node-1.0.0.tgz
 ```
 
 ## Before you open a pull request
@@ -54,11 +52,14 @@ or later, before you open a pull request that touches `src/public/`, `src/worker
 
 ## Releases
 
-`@shieldlabs-ai/node` is bundled into `dist/`. Until it is published on npm, the workflows build it
-from its repository: CI from the `main` branch and the release workflow from the `v1.0.0` tag
-(`SHIELDLABS_NODE_REF` in each workflow), and both stop unless it is a 1.x version. So merge and
-tag the 1.x SDK before this package. While that repository is private, add a read-only token as
-the `SHIELDLABS_NODE_TOKEN` secret.
+`@shieldlabs-ai/node` is pinned as a development dependency and bundled into `dist/`. Local, CI and
+release builds all use `npm ci` and the checked-in lockfile. No sibling repository or private token
+is required. To upgrade the bundled SDK, update the dependency and lockfile together, then run the
+checks above and the stdio smoke test.
+
+To check an installed tarball as an MCP client, pass its executable to the same smoke test:
+`node scripts/smoke-stdio.mjs /path/to/install/node_modules/@shieldlabs-ai/mcp/dist/index.js`.
+The temporary install needs only production dependencies; the Node SDK stays inside the bundle.
 
 Maintainers push a `v*` tag that matches `package.json`. The release workflow checks, builds and
 packs with read-only permissions, then publishes the package to npm with provenance (environment

@@ -12,11 +12,6 @@ on:
 permissions:
   contents: read
 
-env:
-  # The @shieldlabs-ai/node release bundled into dist/: release it (tag v1.0.0 in its repository)
-  # before releasing this package.
-  SHIELDLABS_NODE_REF: v1.0.0
-
 jobs:
   build:
     name: Check, build and pack
@@ -26,16 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          persist-credentials: false
-
-      - name: Check out shieldlabs-node
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          repository: ShieldLabs-ai/shieldlabs-node
-          ref: ${{ env.SHIELDLABS_NODE_REF }}
-          path: .deps/shieldlabs-node
-          # While that repository is private, store a read-only token in SHIELDLABS_NODE_TOKEN.
-          token: ${{ secrets.SHIELDLABS_NODE_TOKEN || github.token }}
           persist-credentials: false
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
@@ -53,23 +38,7 @@ jobs:
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and pack @shieldlabs-ai/node
-        working-directory: .deps/shieldlabs-node
-        run: |
-          version="$(node -p "require('./package.json').version")"
-          case "$version" in
-            1.*) ;;
-            *)
-              echo "::error::@shieldlabs-ai/node at $SHIELDLABS_NODE_REF is version $version; this server needs 1.x."
-              exit 1
-              ;;
-          esac
-          npm ci
-          npm pack --pack-destination ..
-          echo "SHIELDLABS_NODE_TGZ=.deps/shieldlabs-ai-node-$version.tgz" >> "$GITHUB_ENV"
-
       - run: npm ci
-      - run: npm install --no-save "$SHIELDLABS_NODE_TGZ"
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test

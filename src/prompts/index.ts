@@ -37,6 +37,9 @@ export function registerPrompts(server: McpServer, ctx: ServerContext): void {
           '---',
           '',
           guide.text,
+          ...(has(TOOL_NAMES.getIdentification)
+            ? [`You can also verify the signup request ID with ${TOOL_NAMES.getIdentification}.`]
+            : []),
         ].join('\n'),
       );
     },

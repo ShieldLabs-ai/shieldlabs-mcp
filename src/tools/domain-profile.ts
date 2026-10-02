@@ -1,8 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { RateLimitError, type DomainProfile, type ShieldLabsManagement } from '@shieldlabs-ai/node';
+import { RateLimitError, type ShieldLabsManagement } from '@shieldlabs-ai/node';
 import { z } from 'zod';
 import { PROFILE_CACHE_MS, TOOL_NAMES } from '../constants.js';
-import type { ServerContext, SharedRequest } from '../context.js';
+import type { CachedProfile, ServerContext, SharedRequest } from '../context.js';
 import { ToolInputError } from '../errors.js';
 import { code, formatTimestamp } from '../format.js';
 import { failure, readOnlyAnnotations, respond, ResponseFormatSchema } from './shared.js';
@@ -27,6 +27,15 @@ type ProfileOutput = z.infer<typeof OutputSchema>;
 
 /** After a 429 the Management API blocks the IP for 10 minutes. */
 export const MANAGEMENT_BLOCK_MS = 10 * 60 * 1000;
+
+/** Preserve only an empty value or stars followed by at most four visible key characters. */
+function maskedKey(value: string): string {
+  if (value === '') return '';
+  // Comparing the entire match also rejects a trailing newline (which `$` alone permits).
+  return value.length <= 128 && value.match(/^\*{4,}[A-Za-z0-9_-]{0,4}$/)?.[0] === value
+    ? value
+    : '[redacted]';
+}
 
 /** Rejects as soon as `signal` aborts, otherwise settles like `promise`. */
 function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
@@ -54,16 +63,25 @@ async function loadProfile(
   ctx: ServerContext,
   management: ShieldLabsManagement,
   signal: AbortSignal | undefined,
-): Promise<DomainProfile> {
+): Promise<CachedProfile> {
   let request = ctx.profileRequest;
   if (request === undefined) {
     const startedAt = ctx.now();
     const controller = new AbortController();
-    const created: SharedRequest<DomainProfile> = {
+    const created: SharedRequest<CachedProfile> = {
       controller,
       waiters: 0,
       promise: management.getProfile({ signal: controller.signal }).then(
-        (value) => {
+        (profile) => {
+          // Project before sharing the promise or populating the cache. The SDK includes raw
+          // data, and upstream masking is not a sufficient trust boundary for credentials.
+          const value: CachedProfile = {
+            domain: profile.domain,
+            remaining_identifications: profile.remaining_identifications,
+            public_key_masked: maskedKey(profile.public_key_masked),
+            secret_key_masked: maskedKey(profile.secret_key_masked),
+            created_at: profile.created_at,
+          };
           ctx.profileCache = { value, fetchedAt: startedAt };
           return value;
         },
