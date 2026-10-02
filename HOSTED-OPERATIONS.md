@@ -1,8 +1,9 @@
-# Hosted operations handoff
+# Hosted operations reference
 
-Branch: `codex/mcp-operations`, based on `fd99547`. Backend source of truth:
-`sdk-program/mcp-oauth/OPERATIONS-CONTRACT.md`. Implementation is local; no push,
-deployment, registry publication or live account operation is implied.
+This reference describes the tools implemented in this source version. A running
+deployment may expose an earlier version; use MCP discovery to inspect it.
+Source availability does not imply deployment, registry publication or live
+account verification.
 
 ## Tool inputs
 
