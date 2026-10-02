@@ -5,6 +5,7 @@ import {
   SETUP_SKILL_URL,
 } from '../constants.js';
 import type { GuideResponse, ServerContext } from '../context.js';
+import type { ToolName } from '../constants.js';
 
 /** Concise integration guide used when the published setup skill cannot be fetched. */
 export const BUILT_IN_SETUP_GUIDE = `# Integrate ShieldLabs (built-in guide)
@@ -121,13 +122,19 @@ sent, and the webhook is not sent again).
 - No secret key appears in client code or logs.
 - Test on a registered domain: on localhost the page still gets a request ID, but the
   identification is rejected and the backend never finds it.
-- Test with the shieldlabs_get_identification tool: the request ID from a real signup returns a verdict.
+- Test with your server SDK: the request ID from a real signup returns a verdict.
 `;
 
 export interface SetupGuide {
   text: string;
   /** Where the text came from: the skill URL, or "built-in". */
   source: string;
+}
+
+/** Remote guides must not instruct the client to call tools this server does not expose. */
+function usesEnabledTools(text: string, ctx: ServerContext): boolean {
+  const names = text.match(/\bshieldlabs_[a-z][a-z0-9_]*\b/g) ?? [];
+  return names.every((name) => ctx.enabledTools.has(name as ToolName));
 }
 
 /**
@@ -170,7 +177,7 @@ export async function loadSetupGuide(ctx: ServerContext): Promise<SetupGuide> {
 
   const now = ctx.now();
   if (ctx.guideCache !== undefined && now - ctx.guideCache.fetchedAt < SETUP_SKILL_CACHE_MS) {
-    return ctx.guideCache.value;
+    return usesEnabledTools(ctx.guideCache.value.text, ctx) ? ctx.guideCache.value : builtIn;
   }
 
   const controller = new AbortController();
@@ -183,6 +190,9 @@ export async function loadSetupGuide(ctx: ServerContext): Promise<SetupGuide> {
     if (!response.ok) return builtIn;
     const text = await readCappedText(response, SETUP_SKILL_MAX_BYTES);
     if (text === undefined || text.trim() === '') return builtIn;
+    // Fall back as a whole: deleting arbitrary Markdown lines can damage a code sample or
+    // leave an incomplete workflow. The built-in guide uses the SDK without requiring tools.
+    if (!usesEnabledTools(text, ctx)) return builtIn;
     const guide = { text, source: SETUP_SKILL_URL };
     ctx.guideCache = { value: guide, fetchedAt: now };
     return guide;

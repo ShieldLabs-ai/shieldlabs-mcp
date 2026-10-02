@@ -61,7 +61,10 @@ export function describeError(
   } else if (error instanceof ConnectionError) {
     message = `Error: could not reach the ShieldLabs API. Check network access from the machine running this server and the base URL settings (SHIELDLABS_API_BASE_URL, SHIELDLABS_MANAGEMENT_BASE_URL).`;
   } else if (error instanceof ApiError) {
-    message = `Error: the ShieldLabs API answered HTTP ${error.status}. ${error.message}`;
+    // Management errors can echo profile credentials we do not know from configuration.
+    message = history
+      ? `Error: the ShieldLabs API answered HTTP ${error.status}. ${error.message}`
+      : `Error: the Management API answered HTTP ${error.status}. Check SHIELDLABS_MANAGEMENT_BASE_URL and the profile settings; if it persists, contact ${SUPPORT_EMAIL}.`;
   } else if (error instanceof ShieldLabsError) {
     message = `Error: ${error.message}`;
   } else {

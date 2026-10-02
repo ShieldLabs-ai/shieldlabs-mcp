@@ -6,6 +6,16 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Domain profile responses retain only masked key values before sharing or caching the result;
+  unexpected key values are redacted and raw profile data is discarded. Management error messages
+  no longer echo upstream response bodies.
+- The integration prompt respects the exposed tools, including offline mode and the allowlist.
+  A remote or cached setup guide that mentions unavailable tools falls back to the built-in guide.
+- Clean source builds install the published Node SDK from the public registry as a pinned build
+  dependency. CI and releases use the same lockfile, without a sibling SDK checkout or tarball.
+
 ### Added
 
 - A Grok client example (`examples/grok`) for the same local server Claude Code starts, plus the

@@ -33,6 +33,74 @@ function promptText(result: Awaited<ReturnType<Connected['client']['getPrompt']>
 }
 
 describe('integrate_shieldlabs', () => {
+  it.each([
+    [true, [TOOL_NAMES.currentTime]],
+    [false, [TOOL_NAMES.currentTime]],
+    [true, [TOOL_NAMES.searchHistory, TOOL_NAMES.explainRiskScore]],
+    [false, [TOOL_NAMES.getIdentification]],
+    [true, []],
+  ])(
+    'only mentions exposed tools across discovery and prompts (offline=%s, tools=%j)',
+    async (offline, tools) => {
+      const fetch = guideFetch(
+        ok(`# Setup\nCall ${TOOL_NAMES.getIdentification} and ${TOOL_NAMES.summarizeEntity}.`),
+      );
+      connected = await connect(FULL_ENV, { guideFetch: fetch }, { offline, tools });
+      const { client } = connected;
+      const enabled =
+        tools.length === 0 ? [] : (await client.listTools()).tools.map((tool) => tool.name);
+      const surfaces: unknown[] = [client.getInstructions(), await client.listResourceTemplates()];
+      for (const resource of (await client.listResources()).resources) {
+        surfaces.push(await client.readResource({ uri: resource.uri }));
+      }
+      for (const prompt of (await client.listPrompts()).prompts) {
+        const args =
+          prompt.name === 'investigate_user'
+            ? { user_hid: 'example' }
+            : prompt.name === 'review_request'
+              ? { request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b' }
+              : {};
+        surfaces.push(await client.getPrompt({ name: prompt.name, arguments: args }));
+      }
+      for (const surface of surfaces) {
+        for (const name of JSON.stringify(surface).match(/\bshieldlabs_[a-z][a-z0-9_]*\b/g) ?? []) {
+          expect(enabled).toContain(name);
+        }
+      }
+      const setup = promptText(await client.getPrompt({ name: 'integrate_shieldlabs' }));
+      expect(setup).toContain('identifications.get(requestId)');
+      if (enabled.includes(TOOL_NAMES.getIdentification))
+        expect(setup).toContain(TOOL_NAMES.getIdentification);
+      else {
+        expect(setup).not.toContain(TOOL_NAMES.getIdentification);
+        if (enabled.length === 0) {
+          await expect(
+            client.callTool({ name: TOOL_NAMES.getIdentification, arguments: {} }),
+          ).rejects.toThrow();
+        } else {
+          const denied = await client.callTool({
+            name: TOOL_NAMES.getIdentification,
+            arguments: {},
+          });
+          expect(denied.isError).toBe(true);
+        }
+        expect((await client.listResourceTemplates()).resourceTemplates).toHaveLength(0);
+      }
+      if (offline) expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('checks a cached remote guide against the current enabled tools', async () => {
+    const fetch = guideFetch(ok(`Call ${TOOL_NAMES.getIdentification}.`));
+    connected = await connect(FULL_ENV, { guideFetch: fetch }, { offline: false });
+    expect((await loadSetupGuide(connected.ctx)).source).toBe(SETUP_SKILL_URL);
+    connected.ctx.enabledTools = new Set([TOOL_NAMES.currentTime]);
+    const restricted = await loadSetupGuide(connected.ctx);
+    expect(restricted.source).toBe('built-in');
+    expect(restricted.text).not.toContain(TOOL_NAMES.getIdentification);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('inlines the published setup skill and caches it for an hour', async () => {
     let now = 1_000_000;
     const fetch = guideFetch(ok('# ShieldLabs setup skill\nStep 1.'));

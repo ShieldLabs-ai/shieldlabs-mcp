@@ -55,6 +55,9 @@ export interface CachedValue<T> {
   fetchedAt: number;
 }
 
+/** Profile fields safe to share and cache; never retain the SDK's raw response. */
+export type CachedProfile = Omit<DomainProfile, 'raw'>;
+
 /** A request in progress that concurrent tool calls share. */
 export interface SharedRequest<T> {
   promise: Promise<T>;
@@ -75,9 +78,9 @@ export interface ServerContext {
   enabledTools: ReadonlySet<ToolName>;
   /** Tools listed in --tools that cannot run with the current configuration. */
   unavailableRequestedTools: ToolName[];
-  profileCache: CachedValue<DomainProfile> | undefined;
+  profileCache: CachedValue<CachedProfile> | undefined;
   /** The Management API profile request in progress, shared by concurrent calls. */
-  profileRequest: SharedRequest<DomainProfile> | undefined;
+  profileRequest: SharedRequest<CachedProfile> | undefined;
   /** After a Management API 429: epoch ms until which the API is not called again. */
   profileBlockedUntil: number | undefined;
   guideCache: CachedValue<{ text: string; source: string }> | undefined;

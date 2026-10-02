@@ -6,6 +6,7 @@
 import { strict as assert } from 'node:assert';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import {
@@ -16,11 +17,21 @@ import {
   MOCK_SECRET_KEY,
 } from './mock-history-api.mjs';
 
-const entry = fileURLToPath(new URL('../dist/index.js', import.meta.url));
+const entry =
+  process.argv[2] === undefined
+    ? fileURLToPath(new URL('../dist/index.js', import.meta.url))
+    : resolve(process.argv[2]);
+const clients = new Set();
+const stderrChunks = [];
+const rawPublicKey = '0123456789abcdef0123456789abcdef';
+const rawSecretKey = 'unconfigured-upstream-secret-fixture';
 
 async function startMockApi() {
-  const api = createMockApi(loadDataset());
+  const dataset = loadDataset();
+  const api = createMockApi(dataset);
+  let profileCalls = 0;
   const server = createServer((req, res) => {
+    if (req.url === '/v1/profile') profileCalls++;
     const reply = api.handle({
       method: req.method ?? 'GET',
       url: req.url ?? '/',
@@ -33,32 +44,45 @@ async function startMockApi() {
     res.end(reply.body);
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  return { server, base: `http://127.0.0.1:${server.address().port}` };
+  return {
+    server,
+    base: `http://127.0.0.1:${server.address().port}`,
+    injectRawProfile() {
+      dataset.profile.PublicKey = rawPublicKey;
+      dataset.profile.Secret = rawSecretKey;
+      profileCalls = 0;
+    },
+    profileCalls: () => profileCalls,
+  };
 }
 
-async function connect(env) {
+async function connect(env, args = []) {
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: [entry, '--offline'],
+    args: [entry, '--offline', ...args],
     env,
     stderr: 'pipe',
   });
   const client = new Client({ name: 'shieldlabs-mcp-smoke', version: '1.0.0' });
+  transport.stderr.on('data', (chunk) => stderrChunks.push(chunk.toString()));
+  clients.add(client);
   await client.connect(transport);
   return client;
 }
 
 const json = (result) => JSON.parse(result.content[0].text);
 
-const { server, base } = await startMockApi();
+const api = await startMockApi();
+const { server, base } = api;
 try {
-  const client = await connect({
+  const env = {
     SHIELDLABS_API_KEY: MOCK_API_KEY,
     SHIELDLABS_API_BASE_URL: base,
     SHIELDLABS_SECRET_KEY: MOCK_SECRET_KEY,
     SHIELDLABS_DOMAIN: MOCK_DOMAIN,
     SHIELDLABS_MANAGEMENT_BASE_URL: base,
-  });
+  };
+  const client = await connect(env);
   const { tools } = await client.listTools();
   assert.equal(tools.length, 7);
   console.log(`tools/list: ${tools.map((tool) => tool.name).join(', ')}`);
@@ -134,7 +158,53 @@ try {
   ]);
   console.log(`without SHIELDLABS_API_KEY: ${offlineTools.join(', ')}`);
   await offline.close();
+
+  api.injectRawProfile();
+  const profileClient = await connect(env);
+  const outputs = await Promise.all(
+    ['json', 'markdown', 'json', 'markdown'].map((response_format) =>
+      profileClient.callTool({
+        name: 'shieldlabs_get_domain_profile',
+        arguments: { response_format },
+      }),
+    ),
+  );
+  const cached = await profileClient.callTool({
+    name: 'shieldlabs_get_domain_profile',
+    arguments: {},
+  });
+  assert.equal(cached.structuredContent.from_cache, true);
+  assert.equal(api.profileCalls(), 1);
+  for (const output of [...outputs, cached]) {
+    assert.notEqual(output.isError, true);
+    assert.equal(output.structuredContent.public_key_masked, '[redacted]');
+    assert.equal(output.structuredContent.secret_key_masked, '[redacted]');
+    assert.ok(!JSON.stringify(output).includes(rawPublicKey));
+    assert.ok(!JSON.stringify(output).includes(rawSecretKey));
+  }
+  await profileClient.close();
+  console.log('Profile masking: concurrent text/structured results and cache passed.');
+
+  const limited = await connect(env, ['--tools', 'current_time']);
+  assert.deepEqual(
+    (await limited.listTools()).tools.map((tool) => tool.name),
+    ['shieldlabs_current_time'],
+  );
+  const limitedGuide = await limited.getPrompt({ name: 'integrate_shieldlabs' });
+  assert.ok(!JSON.stringify(limitedGuide).includes('shieldlabs_get_identification'));
+  assert.ok(limitedGuide.messages[0].content.text.includes('identifications.get(requestId)'));
+  const denied = await limited.callTool({ name: 'shieldlabs_get_identification', arguments: {} });
+  assert.equal(denied.isError, true);
+  assert.equal((await limited.listResourceTemplates()).resourceTemplates.length, 0);
+  await limited.close();
+  console.log('Allowlist: setup prompt, hidden tool rejection and resources passed.');
+  for (const secret of [MOCK_API_KEY, MOCK_SECRET_KEY, rawPublicKey, rawSecretKey]) {
+    assert.ok(!stderrChunks.join('').includes(secret));
+  }
   console.log('Smoke test passed.');
 } finally {
-  server.close();
+  await Promise.all([...clients].map((client) => client.close()));
+  await new Promise((resolve, reject) =>
+    server.close((error) => (error ? reject(error) : resolve())),
+  );
 }

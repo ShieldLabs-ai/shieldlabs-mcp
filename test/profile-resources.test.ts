@@ -34,7 +34,7 @@ function managementError(status: number) {
 }
 
 /** A Management API whose answers wait until release() (or until the request is aborted). */
-function heldProfileFetch() {
+function heldProfileFetch(profile = fixture('management-profile.json')) {
   const calls: FetchRequestInit[] = [];
   const held: ((response: Response) => void)[] = [];
   const fetch = vi.fn((_url: string, init: FetchRequestInit) => {
@@ -49,7 +49,7 @@ function heldProfileFetch() {
   const release = (): void => {
     for (const resolve of held.splice(0)) {
       resolve(
-        new Response(JSON.stringify(fixture('management-profile.json')), {
+        new Response(JSON.stringify(profile), {
           status: 200,
           headers: { 'content-type': 'application/json' },
         }),
@@ -60,6 +60,99 @@ function heldProfileFetch() {
 }
 
 describe('shieldlabs_get_domain_profile', () => {
+  it('removes unexpected profile keys before sharing, caching or formatting them', async () => {
+    const publicKey = '0123456789abcdef0123456789abcdef';
+    const secretKey = 'upstream-secret-not-in-the-config';
+    const api = heldProfileFetch({
+      ...fixture('management-profile.json'),
+      PublicKey: publicKey,
+      Secret: secretKey,
+      Extra: { Secret: secretKey },
+    });
+    let now = 1_000_000;
+    connected = await connect(FULL_ENV, { apiFetch: api.fetch, now: () => now });
+    const { client, ctx } = connected;
+    const pending = ['markdown', 'json', 'markdown'].map((response_format) =>
+      callTool(client, TOOL_NAMES.getDomainProfile, { response_format }),
+    );
+    await vi.waitFor(() => expect(ctx.profileRequest?.waiters).toBe(3));
+    const shared = ctx.profileRequest!;
+    api.release();
+    const results = await Promise.all(pending);
+    results.push(await callTool(client, TOOL_NAMES.getDomainProfile, { response_format: 'json' }));
+    expect(results.at(-1)!.structuredContent?.from_cache).toBe(true);
+    expect(api.calls).toHaveLength(1);
+    for (const result of results) {
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent).toMatchObject({
+        public_key_masked: '[redacted]',
+        secret_key_masked: '[redacted]',
+      });
+      expect(JSON.stringify(result)).not.toContain(publicKey);
+      expect(JSON.stringify(result)).not.toContain(secretKey);
+    }
+    expect(await shared.promise).not.toHaveProperty('raw');
+    expect(ctx.profileCache?.value).not.toHaveProperty('raw');
+    expect(JSON.stringify(ctx.profileCache)).not.toContain(publicKey);
+    expect(JSON.stringify(ctx.profileCache)).not.toContain(secretKey);
+
+    now += 61_000;
+    const refreshed = callTool(client, TOOL_NAMES.getDomainProfile);
+    await vi.waitFor(() => expect(api.calls).toHaveLength(2));
+    api.release();
+    expect((await refreshed).structuredContent).toMatchObject({
+      from_cache: false,
+      secret_key_masked: '[redacted]',
+    });
+  });
+
+  it.each([
+    ['****************************a3f8', '****************************a3f8'],
+    ['********', '********'],
+    ['', ''],
+    ['1234', '[redacted]'],
+    ['***raw-secret', '[redacted]'],
+    ['raw-secret****', '[redacted]'],
+    ['****12345', '[redacted]'],
+    ['....1234', '[redacted]'],
+    ['****1234\n', '[redacted]'],
+    [null, ''],
+    [{ value: 'raw-secret' }, ''],
+  ])('handles an upstream key value %j safely', async (value, expected) => {
+    connected = await connect(FULL_ENV, {
+      apiFetch: statusFetch(
+        200,
+        JSON.stringify({
+          ...fixture('management-profile.json'),
+          PublicKey: value,
+          Secret: value,
+        }),
+      ).fetch,
+    });
+    const result = await callTool(connected.client, TOOL_NAMES.getDomainProfile);
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      public_key_masked: expected,
+      secret_key_masked: expected,
+    });
+    expect(connected.ctx.profileCache?.value).not.toHaveProperty('raw');
+  });
+
+  it.each([400, 418, 500])(
+    'does not echo profile credentials from HTTP %i error bodies',
+    async (status) => {
+      const secret = 'unexpected-upstream-secret-value';
+      connected = await connect(FULL_ENV, {
+        apiFetch: statusFetch(status, JSON.stringify({ error: secret, Secret: secret })).fetch,
+      });
+      const result = await callTool(connected.client, TOOL_NAMES.getDomainProfile);
+      expect(result.isError).toBe(true);
+      expect(textOf(result)).toContain(`HTTP ${status}`);
+      expect(JSON.stringify(result)).not.toContain(secret);
+      expect(connected.ctx.profileCache).toBeUndefined();
+    },
+  );
+
   it('returns the profile and caches it for 60 seconds', async () => {
     const api = mockApiFetch();
     let now = Date.parse('2026-09-30T12:00:00.000Z');

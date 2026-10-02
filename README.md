@@ -201,7 +201,9 @@ The `integrate_shieldlabs` prompt loads the ShieldLabs setup skill and walks the
 the browser identification, the server-side verdict, webhooks and a verification checklist. On
 stdio it fetches the skill from the `shieldlabs-skills` release this server version was tested with
 (tag `v1.0.0`, never a branch), with a 3-second timeout and a 200 KB limit. It uses its built-in
-guide when that fails, with `--offline`, and always over HTTP.
+guide when that fails, with `--offline`, and always over HTTP. A remote or cached guide that
+mentions unavailable tools also falls back to the built-in guide, which uses the server SDK for
+verification. When exposed, `shieldlabs_get_identification` is offered as an additional check.
 
 ### Run over HTTP
 
@@ -317,6 +319,9 @@ details are internal text, so this server returns the signal slug and weight, as
   flags.
 - **Read-only.** No tool changes anything in ShieldLabs. The Management API tool reads the profile
   only.
+- **Profile keys.** Only already-masked values (stars and at most four final characters) are
+  retained. Unexpected values become `[redacted]` before the response is shared or cached; raw
+  profile bodies are discarded. Management error responses do not echo upstream bodies.
 - **Visitor data is data.** User HIDs, landing URLs, referrers and UTM values in identifications
   come from visitors' browsers. Markdown output renders every API value as inert inline code,
   invisible and control characters are shown as visible escapes in every format, json responses
@@ -493,9 +498,6 @@ sent. Cloudflare sets it; with nginx, use `proxy_set_header CF-Connecting-IP $re
 
 ```bash
 npm ci
-# Until @shieldlabs-ai/node is published, build its tarball in a checkout of shieldlabs-node:
-(cd ../shieldlabs-node && npm ci && npm pack)
-npm install --no-save ../shieldlabs-node/shieldlabs-ai-node-1.0.0.tgz
 npm run typecheck
 npm run lint
 npm test -- --coverage
@@ -507,7 +509,9 @@ npm run worker:check     # the Worker bundle: no Node.js built-in module, size l
 ```
 
 `@shieldlabs-ai/node` is bundled into `dist/` at build time, so the published package depends only on
-`@modelcontextprotocol/sdk` and `zod`.
+`@modelcontextprotocol/sdk` and `zod`. The published Node SDK is pinned as a development dependency;
+`npm ci` installs it from the public registry using the lockfile. No sibling checkout, local SDK
+tarball or registry token is needed. CI and release builds use the same dependency.
 
 ### Fake History API
 
