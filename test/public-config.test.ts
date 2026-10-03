@@ -104,6 +104,7 @@ describe('wrangler.jsonc', () => {
     expect(dev.routes).toEqual([{ pattern: 'dev.mcp.shieldlabs.ai', custom_domain: true }]);
     expect(dev.workers_dev).toBe(false);
     expect(dev.vars).toEqual({
+      INSTALLER_ENABLED: 'false',
       SHIELDLABS_PUBLIC_ORIGIN: 'https://dev.mcp.shieldlabs.ai',
       SHIELDLABS_AUTH_ISSUER: 'https://dev.account.shieldlabs.ai',
       SHIELDLABS_PORTAL_URL: 'https://dev.account.shieldlabs.ai',
@@ -125,6 +126,7 @@ describe('wrangler.jsonc', () => {
     expect(production.routes).toEqual([{ pattern: 'mcp.shieldlabs.ai', custom_domain: true }]);
     expect(production.workers_dev).toBe(false);
     expect(production.vars).toEqual({
+      INSTALLER_ENABLED: 'false',
       SHIELDLABS_PUBLIC_ORIGIN: 'https://mcp.shieldlabs.ai',
       SHIELDLABS_AUTH_ISSUER: 'https://account.shieldlabs.ai',
       SHIELDLABS_PORTAL_URL: 'https://account.shieldlabs.ai',
@@ -134,9 +136,18 @@ describe('wrangler.jsonc', () => {
     const shape = (config: typeof dev) =>
       limits(config).map(({ name, simple }) => ({ name, simple }));
     expect(shape(production)).toEqual(shape(dev));
-    expect(shape(dev).map(({ name }) => name)).toEqual(['RL_TOKEN', 'RL_ANON', 'RL_TOKEN_CHECK']);
+    expect(shape(dev).map(({ name }) => name)).toEqual([
+      'RL_INSTALLER_IP',
+      'RL_TOKEN',
+      'RL_ANON',
+      'RL_TOKEN_CHECK',
+    ]);
+    expect(shape(dev).find(({ name }) => name === 'RL_INSTALLER_IP')?.simple).toEqual({
+      limit: 10,
+      period: 60,
+    });
     const namespaces = [...limits(dev), ...limits(production)].map((rl) => rl.namespace_id);
-    expect(new Set(namespaces).size).toBe(6);
+    expect(new Set(namespaces).size).toBe(8);
   });
 
   it('never deploys Production by default or commits the gateway key', () => {
@@ -147,6 +158,8 @@ describe('wrangler.jsonc', () => {
     }
     for (const config of [top, dev, read('production')]) {
       expect(Object.keys(config.vars)).not.toContain('MCP_GATEWAY_KEY');
+      expect(Object.keys(config.vars)).not.toContain('INSTALLER_ANTHROPIC_API_KEY');
+      expect(config.vars.INSTALLER_ENABLED).toBe('false');
       expect(config.compatibility_flags).toEqual([]);
       expect(config.main).toMatch(/src\/worker\.ts$/);
     }

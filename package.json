@@ -35,6 +35,7 @@
     "server.json",
     "README.md",
     "HOSTED-OPERATIONS.md",
+    "INSTALLER-GATEWAY.md",
     "CHANGELOG.md",
     "LICENSE"
   ],
@@ -58,6 +59,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
     "@modelcontextprotocol/sdk": "^1.31.0",
     "zod": "^4.1.0"
   },

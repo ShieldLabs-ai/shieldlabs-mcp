@@ -50,7 +50,12 @@ describe('package metadata', () => {
       url: 'https://github.com/ShieldLabs-ai/shieldlabs-mcp/issues',
       email: 'contact@shieldlabs.ai',
     });
-    expect(Object.keys(pkg.dependencies).sort()).toEqual(['@modelcontextprotocol/sdk', 'zod']);
+    expect(Object.keys(pkg.dependencies).sort()).toEqual([
+      '@anthropic-ai/sdk',
+      '@modelcontextprotocol/sdk',
+      'zod',
+    ]);
+    expect(pkg.dependencies['@anthropic-ai/sdk']).toBe('0.131.0');
     expect(JSON.stringify(pkg)).not.toContain('file:');
     expect(pkg.mcpName).toBe('io.github.shieldlabs-ai/shieldlabs-mcp');
     expect(pkg.files).toEqual(

@@ -2,6 +2,8 @@
 
 MCP server for ShieldLabs identification and risk analysis, with domain and webhook management in hosted OAuth mode.
 
+The Worker includes a default-off [hosted AI installer gateway](INSTALLER-GATEWAY.md). Renewed OAuth consent and Portal shared quotas are prerequisites before operator enablement.
+
 [![CI](https://github.com/ShieldLabs-ai/shieldlabs-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ShieldLabs-ai/shieldlabs-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/@shieldlabs-ai/mcp.svg)](https://www.npmjs.com/package/@shieldlabs-ai/mcp)

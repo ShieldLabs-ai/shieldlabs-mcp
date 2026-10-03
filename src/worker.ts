@@ -5,9 +5,11 @@ import type { RateLimiter } from './public/rate-limit.js';
 import { formatRequestLog, routeOf, safeId } from './public/request-log.js';
 import { serverErrorResponse } from './public/responses.js';
 import { TokenCache } from './public/token.js';
+import { handleInstallerRequest, type InstallerEnv } from './installer/handler.js';
+import { INSTALLER_PATH } from './installer/limits.js';
 
 /** Bindings of the Worker: the variables and the secret of wrangler.jsonc, and the rate limiters. */
-export interface WorkerEnv extends PublicEnv {
+export interface WorkerEnv extends PublicEnv, InstallerEnv {
   RL_TOKEN?: RateLimiter;
   RL_ANON?: RateLimiter;
   RL_TOKEN_CHECK?: RateLimiter;
@@ -47,6 +49,9 @@ export default {
         }),
       );
       return serverErrorResponse();
+    }
+    if (new URL(request.url).pathname === INSTALLER_PATH) {
+      return handleInstallerRequest(request, config, env, { log });
     }
     return handlePublicRequest(request, config, {
       cache,
